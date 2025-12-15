@@ -131,6 +131,40 @@
                 basicVarNames.push(`s${i+1}`);
             }
 
+            let augHTML = `<h3>Augmented Form</h3>
+            <div style="background:#fff; border:1px solid #ccc; padding:15px; font-family:'Courier New', monospace; margin-bottom:20px; line-height: 1.6;">`;
+
+            
+            augHTML += `(0) Z`;
+            for (let i = 0; i < numVars; i++) {
+                let val = zVars[i]; 
+                if (val >= 0) augHTML += ` + ${fmt(val)}X${i+1}`;
+                else          augHTML += ` - ${fmt(Math.abs(val))}X${i+1}`;
+            }
+            for (let i = 0; i < numConstraints; i++) {
+                augHTML += ` + 0S${i+1}`;
+            }
+            augHTML += ` = 0<br>`;
+
+            for (let i = 0; i < numConstraints; i++) {
+                augHTML += `(${i+1}) `;
+                
+                
+                for (let j = 0; j < numVars; j++) {
+                    let val = constraintsCo[i][j];
+                    if (val >= 0) augHTML += ` + ${fmt(val)}X${j+1}`;
+                    else          augHTML += ` - ${fmt(Math.abs(val))}X${j+1}`;
+                }
+
+                for (let s = 0; s < numConstraints; s++) {
+                    if (s === i) augHTML += ` + 1S${s+1}`;
+                    else         augHTML += ` + 0S${s+1}`;
+                }
+
+                augHTML += ` = ${fmt(rhs[i])}<br>`;
+            }
+            augHTML += `</div>`;
+            outputDiv.innerHTML += augHTML;
             let iteration = 1;
             let optFlag = true;
 
