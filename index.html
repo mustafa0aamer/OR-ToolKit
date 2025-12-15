@@ -3,102 +3,279 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Simplex Solver Tool</title>
+    <title>Simplex Solver</title>
     <style>
-        body { font-family: Arial, sans-serif; padding: 20px; max-width: 600px; margin: auto; }
-        .input-group { margin-bottom: 15px; }
-        input { padding: 5px; margin: 5px; width: 60px; }
-        button { padding: 8px 15px; background-color: #007bff; color: white; border: none; cursor: pointer; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; padding: 20px; max-width: 900px; margin: auto; background-color: #f9f9f9; }
+        h1, h2, h3 { color: #333; }
+        .config-section, .input-section { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); margin-bottom: 20px; }
+        .input-row { display: flex; align-items: center; margin-bottom: 10px; flex-wrap: wrap; }
+        input[type="number"] { width: 70px; padding: 5px; margin: 0 5px; border: 1px solid #ccc; border-radius: 4px; }
+        button { background-color: #007bff; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; font-size: 16px; margin-top: 10px; }
         button:hover { background-color: #0056b3; }
-        #dynamic-inputs { margin-top: 20px; padding: 10px; border: 1px solid #ddd; display: none; }
-        #result-area { margin-top: 20px; font-weight: bold; color: green; }
+        
+        table { border-collapse: collapse; width: 100%; margin: 15px 0; font-size: 14px; background: white; }
+        th, td { border: 1px solid #ddd; padding: 8px; text-align: center; }
+        th { background-color: #f2f2f2; }
+        
+        .pivot-col { background-color: #e6f7ff; }
+        .pivot-row { background-color: #fff0f0; }
+        .pivot-element { background-color: #ffeb3b; font-weight: bold; border: 2px solid #ff9800; }
+        
+        .iteration-box { border: 1px solid #ccc; padding: 15px; margin-bottom: 20px; background: white; }
+        .optimal-res { color: green; font-weight: bold; font-size: 1.2em; }
+        .hidden { display: none; }
     </style>
 </head>
 <body>
 
-    <h1>Simplex Method Setup</h1>
+    <h1>Simplex Method Tool</h1>
 
-    <!-- Phase 1: Ask for number of Variables & Constraints (C++: cin >> DecisionVariablesNum) -->
-    <div class="input-group">
-        <label>How many decision variables?</label>
-        <input type="number" id="numVars" value="2" min="1">
+    <div class="config-section">
+        <h3>Configuration</h3>
+        <label>Variables: <input type="number" id="numVars" value="2" min="1"></label>
+        <label>Constraints: <input type="number" id="numConstraints" value="2" min="1"></label>
+        <button onclick="generateInputs()">Generate Inputs</button>
     </div>
 
-    <div class="input-group">
-        <label>How many constraints?</label>
-        <input type="number" id="numConstraints" value="2" min="1">
+    <div id="matrix-inputs" class="input-section hidden">
+        <h3>Objective Function (Max Z)</h3>
+        <div id="obj-inputs" class="input-row"></div>
+        
+        <h3>Constraints (<=)</h3>
+        <div id="constraint-inputs"></div>
+        
+        <button onclick="solveSimplex()">Solve</button>
     </div>
 
-    <button onclick="generateFields()">Step 1: Generate Inputs</button>
-
-    <!-- Phase 2: Dynamic Inputs for Coefficients (mimicking the C++ loop for input) -->
-    <div id="dynamic-inputs">
-        <h3>Enter Objective Function Coefficients:</h3>
-        <div id="objective-inputs"></div>
-        <br>
-        <button onclick="runSolver()">Step 2: Read & Test</button>
-    </div>
-
-    <!-- Phase 3: Output (C++: cout << result) -->
-    <div id="result-area"></div>
+    <div id="output-area"></div>
 
     <script>
-        // Global variables to store the user's configuration
-        let decisionVariablesNum = 0;
-        let constraintsNum = 0;
+        let numVars = 0;
+        let numConstraints = 0;
 
-        // This function replaces the first 'cin' part
-        function generateFields() {
-            decisionVariablesNum = document.getElementById('numVars').value;
-            constraintsNum = document.getElementById('numConstraints').value;
+        function generateInputs() {
+            numVars = parseInt(document.getElementById('numVars').value);
+            numConstraints = parseInt(document.getElementById('numConstraints').value);
             
-            const container = document.getElementById('objective-inputs');
-            container.innerHTML = ""; // Clear previous inputs
-
-            // Create input boxes dynamically (X1, X2, etc.)
-            for (let i = 0; i < decisionVariablesNum; i++) {
-                // Create a label like "X1:"
-                const label = document.createElement("span");
-                label.innerText = `X${i+1}: `;
-                
-                // Create the input box
-                const input = document.createElement("input");
-                input.type = "number";
-                input.id = `coeff_${i}`; // Give it an ID to find it later
-                input.placeholder = "0";
-
-                container.appendChild(label);
-                container.appendChild(input);
+            const objContainer = document.getElementById('obj-inputs');
+            objContainer.innerHTML = '';
+            for (let i = 0; i < numVars; i++) {
+                objContainer.innerHTML += `X${i+1}: <input type="number" id="z_var_${i}" placeholder="0"> `;
             }
 
-            // Show the hidden area
-            document.getElementById('dynamic-inputs').style.display = 'block';
+            const constContainer = document.getElementById('constraint-inputs');
+            constContainer.innerHTML = '';
+            for (let i = 0; i < numConstraints; i++) {
+                let html = `<div class="input-row"><strong>C${i+1}:</strong> `;
+                for (let j = 0; j < numVars; j++) {
+                    html += `X${j+1} <input type="number" id="c_${i}_${j}" placeholder="0"> + `;
+                }
+                html = html.slice(0, -3); 
+                html += ` <= <input type="number" id="rhs_${i}" placeholder="0"></div>`;
+                constContainer.innerHTML += html;
+            }
+
+            document.getElementById('matrix-inputs').classList.remove('hidden');
+            document.getElementById('output-area').innerHTML = '';
         }
 
-        // This function replaces the loop that reads inputs and the 'cout' loop
-        function runSolver() {
-            let objectiveFuncCo = []; // Equivalent to double* ObjectiveFuncCo
-            let outputText = "Stored Coefficients: ";
+        function solveSimplex() {
+            const outputDiv = document.getElementById('output-area');
+            outputDiv.innerHTML = '';
 
-            // Loop to read values (C++: cin >> ObjectiveFuncCo[i])
-            for (let i = 0; i < decisionVariablesNum; i++) {
-                let val = document.getElementById(`coeff_${i}`).value;
-                
-                // Convert text to number, default to 0 if empty
-                val = val ? parseFloat(val) : 0; 
-                
-                objectiveFuncCo.push(val);
+            let zVars = [];
+            for (let i = 0; i < numVars; i++) {
+                let val = document.getElementById(`z_var_${i}`).value;
+                zVars.push(val === "" ? 0 : parseFloat(val));
             }
 
-            // Loop to display values (C++: cout << ObjectiveFuncCo[i])
-            for (let i = 0; i < objectiveFuncCo.length; i++) {
-                outputText += ` [${objectiveFuncCo[i]}] `;
-            }
-
-            // Display result on screen
-            document.getElementById('result-area').innerText = outputText;
+            let constraintsCo = [];
+            let rhs = [];
+            let slacksCo = [];
             
-            // Note: In JS, garbage collection is automatic, so no 'delete[]' needed!
+            for (let i = 0; i < numConstraints; i++) {
+                let row = [];
+                for (let j = 0; j < numVars; j++) {
+                    let val = document.getElementById(`c_${i}_${j}`).value;
+                    row.push(val === "" ? 0 : parseFloat(val));
+                }
+                constraintsCo.push(row);
+                
+                let rVal = document.getElementById(`rhs_${i}`).value;
+                rhs.push(rVal === "" ? 0 : parseFloat(rVal));
+
+                let slackRow = new Array(numConstraints).fill(0.0);
+                slackRow[i] = 1.0;
+                slacksCo.push(slackRow);
+            }
+
+            let zSlacks = new Array(numConstraints).fill(0.0);
+            
+            for (let i = 0; i < numVars; i++) {
+                zVars[i] *= -1;
+            }
+            
+            let zValue = 0.0;
+            let basicVarNames = [];
+            for (let i = 0; i < numConstraints; i++) {
+                basicVarNames.push(`s${i+1}`);
+            }
+
+            let iteration = 1;
+            let optFlag = true;
+
+            while (optFlag) {
+                if (iteration > 100) {
+                    outputDiv.innerHTML += `<p style="color:red">Max iterations reached.</p>`;
+                    break;
+                }
+
+                let zRowMini = 0;
+                let enterCol = -1;
+                let enteringIsSlack = false;
+                let enterSlackIdx = -1;
+
+                for (let i = 0; i < numVars; i++) {
+                    if (zVars[i] < zRowMini) {
+                        zRowMini = zVars[i];
+                        enterCol = i;
+                        enteringIsSlack = false;
+                    }
+                }
+
+                for (let i = 0; i < numConstraints; i++) {
+                    if (zSlacks[i] < zRowMini) {
+                        zRowMini = zSlacks[i];
+                        enterCol = i; 
+                        enteringIsSlack = true;
+                        enterSlackIdx = i;
+                    }
+                }
+
+                if (zRowMini >= -1e-9) {
+                    outputDiv.innerHTML += `<h3>Optimal Solution Reached</h3>`;
+                    optFlag = false;
+                    break;
+                }
+
+                let leaveRow = -1;
+                let minRatio = Infinity;
+                let ratios = [];
+
+                for (let i = 0; i < numConstraints; i++) {
+                    let coeff = enteringIsSlack ? slacksCo[i][enterSlackIdx] : constraintsCo[i][enterCol];
+                    let r = -1;
+                    
+                    if (coeff > 1e-9) {
+                        r = rhs[i] / coeff;
+                        if (r < minRatio) {
+                            minRatio = r;
+                            leaveRow = i;
+                        }
+                    }
+                    ratios.push(r);
+                }
+
+                if (leaveRow === -1) {
+                    outputDiv.innerHTML += `<p style="color:red">Unbounded Solution.</p>`;
+                    return;
+                }
+
+                let enteringName = enteringIsSlack ? `s${enterSlackIdx+1}` : `x${enterCol+1}`;
+                
+                let tableHTML = `<div class="iteration-box"><h4>Iteration ${iteration}</h4>`;
+                tableHTML += `<p>Entering: <b>${enteringName}</b> | Leaving: <b>${basicVarNames[leaveRow]}</b></p>`;
+                tableHTML += `<table><tr><th>Basic</th><th>Z</th>`;
+                
+                for(let j=0; j<numVars; j++) tableHTML += `<th>x${j+1}</th>`;
+                for(let j=0; j<numConstraints; j++) tableHTML += `<th>s${j+1}</th>`;
+                tableHTML += `<th>RHS</th><th>Ratio</th></tr>`;
+
+                tableHTML += `<tr><td>Z</td><td>1</td>`;
+                zVars.forEach((v, idx) => {
+                    let isPivCol = (!enteringIsSlack && idx === enterCol);
+                    tableHTML += `<td class="${isPivCol ? 'pivot-col' : ''}">${v.toFixed(3)}</td>`;
+                });
+                zSlacks.forEach((v, idx) => {
+                    let isPivCol = (enteringIsSlack && idx === enterSlackIdx);
+                    tableHTML += `<td class="${isPivCol ? 'pivot-col' : ''}">${v.toFixed(3)}</td>`;
+                });
+                tableHTML += `<td>${zValue.toFixed(3)}</td><td>-</td></tr>`;
+
+                for (let i = 0; i < numConstraints; i++) {
+                    let isPivRow = (i === leaveRow);
+                    tableHTML += `<tr class="${isPivRow ? 'pivot-row' : ''}">`;
+                    tableHTML += `<td>${basicVarNames[i]}</td><td>0</td>`;
+                    
+                    for (let j = 0; j < numVars; j++) {
+                        let isPivCol = (!enteringIsSlack && j === enterCol);
+                        let isPivEl = (isPivRow && isPivCol);
+                        tableHTML += `<td class="${isPivEl ? 'pivot-element' : (isPivCol ? 'pivot-col' : '')}">${constraintsCo[i][j].toFixed(3)}</td>`;
+                    }
+                    
+                    for (let j = 0; j < numConstraints; j++) {
+                        let isPivCol = (enteringIsSlack && j === enterSlackIdx);
+                        let isPivEl = (isPivRow && isPivCol);
+                        tableHTML += `<td class="${isPivEl ? 'pivot-element' : (isPivCol ? 'pivot-col' : '')}">${slacksCo[i][j].toFixed(3)}</td>`;
+                    }
+
+                    tableHTML += `<td>${rhs[i].toFixed(3)}</td>`;
+                    tableHTML += `<td>${ratios[i] !== -1 ? ratios[i].toFixed(3) : '-'}</td></tr>`;
+                }
+                tableHTML += `</table></div>`;
+                outputDiv.innerHTML += tableHTML;
+
+                let pivotElement = enteringIsSlack ? slacksCo[leaveRow][enterSlackIdx] : constraintsCo[leaveRow][enterCol];
+
+                for (let j = 0; j < numVars; j++) constraintsCo[leaveRow][j] /= pivotElement;
+                for (let j = 0; j < numConstraints; j++) slacksCo[leaveRow][j] /= pivotElement;
+                rhs[leaveRow] /= pivotElement;
+
+                basicVarNames[leaveRow] = enteringName;
+
+                for (let i = 0; i < numConstraints; i++) {
+                    if (i !== leaveRow) {
+                        let factor = enteringIsSlack ? slacksCo[i][enterSlackIdx] : constraintsCo[i][enterCol];
+                        for (let j = 0; j < numVars; j++) constraintsCo[i][j] -= factor * constraintsCo[leaveRow][j];
+                        for (let j = 0; j < numConstraints; j++) slacksCo[i][j] -= factor * slacksCo[leaveRow][j];
+                        rhs[i] -= factor * rhs[leaveRow];
+                    }
+                }
+
+                let zFactor = enteringIsSlack ? zSlacks[enterSlackIdx] : zVars[enterCol];
+                for (let j = 0; j < numVars; j++) zVars[j] -= zFactor * constraintsCo[leaveRow][j];
+                for (let j = 0; j < numConstraints; j++) zSlacks[j] -= zFactor * slacksCo[leaveRow][j];
+                zValue -= zFactor * rhs[leaveRow];
+
+                iteration++;
+            }
+
+            let finalResHTML = `<div class="optimal-res">Max Z = ${zValue.toFixed(4)}</div><br>Variables:<br>`;
+            
+            for (let i = 0; i < numVars; i++) {
+                let name = `x${i+1}`;
+                let val = 0.0;
+                for (let r = 0; r < numConstraints; r++) {
+                    if (basicVarNames[r] === name) {
+                        val = rhs[r];
+                        break;
+                    }
+                }
+                finalResHTML += `${name} = ${val.toFixed(4)}<br>`;
+            }
+             for (let i = 0; i < numConstraints; i++) {
+                let name = `s${i+1}`;
+                let val = 0.0;
+                for (let r = 0; r < numConstraints; r++) {
+                    if (basicVarNames[r] === name) {
+                        val = rhs[r];
+                        break;
+                    }
+                }
+                finalResHTML += `${name} = ${val.toFixed(4)}<br>`;
+            }
+
+            outputDiv.innerHTML += finalResHTML;
         }
     </script>
 </body>
