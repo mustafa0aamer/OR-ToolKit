@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simplex Solver Tool</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; max-width: 600px; margin: auto; }
+        .input-group { margin-bottom: 15px; }
+        input { padding: 5px; margin: 5px; width: 60px; }
+        button { padding: 8px 15px; background-color: #007bff; color: white; border: none; cursor: pointer; }
+        button:hover { background-color: #0056b3; }
+        #dynamic-inputs { margin-top: 20px; padding: 10px; border: 1px solid #ddd; display: none; }
+        #result-area { margin-top: 20px; font-weight: bold; color: green; }
+    </style>
+</head>
+<body>
+
+    <h1>Simplex Method Setup</h1>
+
+    <!-- Phase 1: Ask for number of Variables & Constraints (C++: cin >> DecisionVariablesNum) -->
+    <div class="input-group">
+        <label>How many decision variables?</label>
+        <input type="number" id="numVars" value="2" min="1">
+    </div>
+
+    <div class="input-group">
+        <label>How many constraints?</label>
+        <input type="number" id="numConstraints" value="2" min="1">
+    </div>
+
+    <button onclick="generateFields()">Step 1: Generate Inputs</button>
+
+    <!-- Phase 2: Dynamic Inputs for Coefficients (mimicking the C++ loop for input) -->
+    <div id="dynamic-inputs">
+        <h3>Enter Objective Function Coefficients:</h3>
+        <div id="objective-inputs"></div>
+        <br>
+        <button onclick="runSolver()">Step 2: Read & Test</button>
+    </div>
+
+    <!-- Phase 3: Output (C++: cout << result) -->
+    <div id="result-area"></div>
+
+    <script>
+        // Global variables to store the user's configuration
+        let decisionVariablesNum = 0;
+        let constraintsNum = 0;
+
+        // This function replaces the first 'cin' part
+        function generateFields() {
+            decisionVariablesNum = document.getElementById('numVars').value;
+            constraintsNum = document.getElementById('numConstraints').value;
+            
+            const container = document.getElementById('objective-inputs');
+            container.innerHTML = ""; // Clear previous inputs
+
+            // Create input boxes dynamically (X1, X2, etc.)
+            for (let i = 0; i < decisionVariablesNum; i++) {
+                // Create a label like "X1:"
+                const label = document.createElement("span");
+                label.innerText = `X${i+1}: `;
+                
+                // Create the input box
+                const input = document.createElement("input");
+                input.type = "number";
+                input.id = `coeff_${i}`; // Give it an ID to find it later
+                input.placeholder = "0";
+
+                container.appendChild(label);
+                container.appendChild(input);
+            }
+
+            // Show the hidden area
+            document.getElementById('dynamic-inputs').style.display = 'block';
+        }
+
+        // This function replaces the loop that reads inputs and the 'cout' loop
+        function runSolver() {
+            let objectiveFuncCo = []; // Equivalent to double* ObjectiveFuncCo
+            let outputText = "Stored Coefficients: ";
+
+            // Loop to read values (C++: cin >> ObjectiveFuncCo[i])
+            for (let i = 0; i < decisionVariablesNum; i++) {
+                let val = document.getElementById(`coeff_${i}`).value;
+                
+                // Convert text to number, default to 0 if empty
+                val = val ? parseFloat(val) : 0; 
+                
+                objectiveFuncCo.push(val);
+            }
+
+            // Loop to display values (C++: cout << ObjectiveFuncCo[i])
+            for (let i = 0; i < objectiveFuncCo.length; i++) {
+                outputText += ` [${objectiveFuncCo[i]}] `;
+            }
+
+            // Display result on screen
+            document.getElementById('result-area').innerText = outputText;
+            
+            // Note: In JS, garbage collection is automatic, so no 'delete[]' needed!
+        }
+    </script>
+</body>
+</html>
