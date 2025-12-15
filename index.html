@@ -197,7 +197,35 @@
                 }
 
                 if (zRowMini >= -1e-9) {
+                    
+                    
+                    let finalTableHTML = `<div class="iteration-box" style="border: 2px solid green; background-color: #f0fff0;">
+                        <h4 style="color: green; margin-top:0;">Final Optimal Tableau</h4>
+                        <table>
+                        <tr><th>Basic</th><th>Z</th>`;
+                    
+                    for(let j=0; j<numVars; j++) finalTableHTML += `<th>x${j+1}</th>`;
+                    for(let j=0; j<numConstraints; j++) finalTableHTML += `<th>s${j+1}</th>`;
+                    finalTableHTML += `<th>RHS</th></tr>`;
+
+                    finalTableHTML += `<tr><td>Z</td><td>1</td>`;
+                    zVars.forEach(v => finalTableHTML += `<td>${fmt(v)}</td>`);
+                    zSlacks.forEach(v => finalTableHTML += `<td>${fmt(v)}</td>`);
+                    finalTableHTML += `<td>${fmt(zValue)}</td></tr>`;
+
+                    for (let i = 0; i < numConstraints; i++) {
+                        finalTableHTML += `<tr><td>${basicVarNames[i]}</td><td>0</td>`;
+                        for (let j = 0; j < numVars; j++) finalTableHTML += `<td>${fmt(constraintsCo[i][j])}</td>`;
+                        for (let j = 0; j < numConstraints; j++) finalTableHTML += `<td>${fmt(slacksCo[i][j])}</td>`;
+                        finalTableHTML += `<td>${fmt(rhs[i])}</td></tr>`;
+                    }
+                    finalTableHTML += `</table></div>`;
+                    outputDiv.innerHTML += finalTableHTML;
+
                     outputDiv.innerHTML += `<h3>Optimal Solution Reached</h3>`;
+                    optFlag = false;
+                    break;
+                }
                     optFlag = false;
                     break;
                 }
