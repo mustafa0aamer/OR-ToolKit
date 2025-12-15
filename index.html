@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Simplex Solver</title>
+    <title>Simplex Iteration Visualizer V 0.0</title>
     <style>
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; padding: 20px; max-width: 900px; margin: auto; background-color: #f9f9f9; }
         h1, h2, h3 { color: #333; }
@@ -52,6 +52,10 @@
     <script>
         let numVars = 0;
         let numConstraints = 0;
+
+        function fmt(num) {
+            return parseFloat(num.toFixed(3));
+        }
 
         function generateInputs() {
             numVars = parseInt(document.getElementById('numVars').value);
@@ -194,13 +198,13 @@
                 tableHTML += `<tr><td>Z</td><td>1</td>`;
                 zVars.forEach((v, idx) => {
                     let isPivCol = (!enteringIsSlack && idx === enterCol);
-                    tableHTML += `<td class="${isPivCol ? 'pivot-col' : ''}">${v.toFixed(3)}</td>`;
+                    tableHTML += `<td class="${isPivCol ? 'pivot-col' : ''}">${fmt(v)}</td>`;
                 });
                 zSlacks.forEach((v, idx) => {
                     let isPivCol = (enteringIsSlack && idx === enterSlackIdx);
-                    tableHTML += `<td class="${isPivCol ? 'pivot-col' : ''}">${v.toFixed(3)}</td>`;
+                    tableHTML += `<td class="${isPivCol ? 'pivot-col' : ''}">${fmt(v)}</td>`;
                 });
-                tableHTML += `<td>${zValue.toFixed(3)}</td><td>-</td></tr>`;
+                tableHTML += `<td>${fmt(zValue)}</td><td>-</td></tr>`;
 
                 for (let i = 0; i < numConstraints; i++) {
                     let isPivRow = (i === leaveRow);
@@ -210,17 +214,17 @@
                     for (let j = 0; j < numVars; j++) {
                         let isPivCol = (!enteringIsSlack && j === enterCol);
                         let isPivEl = (isPivRow && isPivCol);
-                        tableHTML += `<td class="${isPivEl ? 'pivot-element' : (isPivCol ? 'pivot-col' : '')}">${constraintsCo[i][j].toFixed(3)}</td>`;
+                        tableHTML += `<td class="${isPivEl ? 'pivot-element' : (isPivCol ? 'pivot-col' : '')}">${fmt(constraintsCo[i][j])}</td>`;
                     }
                     
                     for (let j = 0; j < numConstraints; j++) {
                         let isPivCol = (enteringIsSlack && j === enterSlackIdx);
                         let isPivEl = (isPivRow && isPivCol);
-                        tableHTML += `<td class="${isPivEl ? 'pivot-element' : (isPivCol ? 'pivot-col' : '')}">${slacksCo[i][j].toFixed(3)}</td>`;
+                        tableHTML += `<td class="${isPivEl ? 'pivot-element' : (isPivCol ? 'pivot-col' : '')}">${fmt(slacksCo[i][j])}</td>`;
                     }
 
-                    tableHTML += `<td>${rhs[i].toFixed(3)}</td>`;
-                    tableHTML += `<td>${ratios[i] !== -1 ? ratios[i].toFixed(3) : '-'}</td></tr>`;
+                    tableHTML += `<td>${fmt(rhs[i])}</td>`;
+                    tableHTML += `<td>${ratios[i] !== -1 ? fmt(ratios[i]) : '-'}</td></tr>`;
                 }
                 tableHTML += `</table></div>`;
                 outputDiv.innerHTML += tableHTML;
@@ -250,7 +254,7 @@
                 iteration++;
             }
 
-            let finalResHTML = `<div class="optimal-res">Max Z = ${zValue.toFixed(4)}</div><br>Variables:<br>`;
+            let finalResHTML = `<div class="optimal-res">Max Z = ${fmt(zValue)}</div><br>Variables:<br>`;
             
             for (let i = 0; i < numVars; i++) {
                 let name = `x${i+1}`;
@@ -261,7 +265,7 @@
                         break;
                     }
                 }
-                finalResHTML += `${name} = ${val.toFixed(4)}<br>`;
+                finalResHTML += `${name} = ${fmt(val)}<br>`;
             }
              for (let i = 0; i < numConstraints; i++) {
                 let name = `s${i+1}`;
@@ -272,7 +276,7 @@
                         break;
                     }
                 }
-                finalResHTML += `${name} = ${val.toFixed(4)}<br>`;
+                finalResHTML += `${name} = ${fmt(val)}<br>`;
             }
 
             outputDiv.innerHTML += finalResHTML;
