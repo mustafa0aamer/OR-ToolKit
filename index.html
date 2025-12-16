@@ -5,6 +5,33 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Simplex Iteration Visualizer</title>
     <style>
+        /* Contact Footer Styling */
+.contact-footer {
+    text-align: center;
+    margin-top: 40px;      /* Space away from the calculator */
+    margin-bottom: 20px;   /* Space from bottom of screen */
+    padding: 10px;
+}
+
+.contact-footer p {
+    margin: 0 0 5px 0;     /* Small gap between text and icon */
+    font-size: 14px;
+    color: #666;
+    font-weight: 600;
+}
+
+.contact-footer img {
+    width: 45px;           /* Small and compact size */
+    height: auto;
+    transition: transform 0.2s ease; /* Smooth animation */
+    display: inline-block;
+}
+
+/* Hover Effect: Icon grows slightly */
+.contact-footer img:hover {
+    transform: scale(1.1);
+    opacity: 0.9;
+}
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; padding: 20px; max-width: 900px; margin: auto; background-color: #f9f9f9; }
         h1, h2, h3 { color: #333; }
         .config-section, .input-section { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); margin-bottom: 20px; }
@@ -349,8 +376,8 @@
             outputDiv.innerHTML += finalResHTML;
         }
 const NAMESPACE = 'simplex-visualizer-unique-id';
-const KEY_VISITS = 'site-visits';
-const KEY_SOLVED = 'problems-solved';
+const KEY_VISITS = 'site-visits1';
+const KEY_SOLVED = 'problems-solved1';
 
 // 1. Initialize Stats on Page Load
 function initStats() {
@@ -394,6 +421,12 @@ initStats();
 <div style="position: fixed; bottom: 10px; left: 10px; background: rgba(255, 255, 255, 0.95); padding: 8px 12px; border: 1px solid #ccc; border-radius: 5px; font-family: sans-serif; font-size: 13px; z-index: 1000; box-shadow: 0 2px 5px rgba(0,0,0,0.1);">
     <div style="margin-bottom: 4px;">Visits: <span id="visit-count">...</span></div>
     <div>Solved: <span id="solve-count">...</span></div>
+</div>
+    <div class="contact-footer">
+    <p>:(Contact Me) للتواصل</p>
+    <a href="https://wa.me/201554531921" target="_blank" title="Chat on WhatsApp">
+        <img src="https://i.ibb.co/VZvZ88M/1000653468.png" alt="WhatsApp">
+    </a>
 </div>
 </body>
 </html>
