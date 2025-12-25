@@ -1,0 +1,486 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simplex Method Suite</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; padding: 20px; max-width: 1000px; margin: auto; background-color: #f4f6f9; color: #333; }
+        h1, h2, h3 { color: #2c3e50; text-align: center; }
+        
+        .tab-container { display: flex; justify-content: center; margin-bottom: 20px; }
+        .tab-button { background-color: #ddd; border: none; outline: none; cursor: pointer; padding: 14px 24px; transition: 0.3s; font-size: 17px; font-weight: bold; border-radius: 5px 5px 0 0; margin: 0 2px; }
+        .tab-button:hover { background-color: #ccc; }
+        .tab-button.active { background-color: #007bff; color: white; }
+        
+        .tool-content { display: none; padding: 20px; border: 1px solid #ccc; background: white; border-radius: 0 0 5px 5px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        .tool-content.active { display: block; }
+
+        .input-section { margin-bottom: 20px; padding: 15px; background: #eef2f5; border-radius: 8px; }
+        .input-row { display: flex; align-items: center; margin-bottom: 10px; flex-wrap: wrap; justify-content: center; }
+        input[type="number"], input[type="text"] { width: 60px; padding: 5px; margin: 0 5px; border: 1px solid #ccc; border-radius: 4px; text-align: center; }
+        
+        button.action-btn { background-color: #28a745; color: white; border: none; padding: 10px 25px; border-radius: 5px; cursor: pointer; font-size: 16px; margin-top: 10px; transition: background 0.2s; display: block; margin: 10px auto; }
+        button.action-btn:hover { background-color: #218838; }
+        button.gen-btn { background-color: #007bff; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; }
+        button.gen-btn:hover { background-color: #0056b3; }
+
+        table { border-collapse: collapse; width: 100%; margin: 20px 0; font-size: 14px; background: white; box-shadow: 0 2px 3px rgba(0,0,0,0.1); }
+        th, td { border: 1px solid #bdc3c7; padding: 10px; text-align: center; }
+        
+        .or-simplex-table th { background-color: #3498db; color: white; }
+        .or-simplex-table .cj-row td { background-color: #ecf0f1; font-weight: bold; color: #2980b9; border-bottom: 2px solid #3498db; }
+        .or-simplex-table .zj-row td { background-color: #fcf3cf; font-weight: bold; }
+        .or-simplex-table .net-row td { background-color: #d5f5e3; font-weight: bold; color: #27ae60; }
+        
+        .lp-simplex-table th { background-color: #34495e; color: white; }
+        
+        .pivot-col { background-color: #e8f6f3; }
+        .pivot-row { background-color: #fef9e7; }
+        .pivot-element { background-color: #f1c40f; font-weight: bold; border: 2px solid #e67e22; color: black; }
+
+        .iteration-box { border: 1px solid #ddd; padding: 15px; margin-bottom: 25px; background: white; border-radius: 8px; }
+        .iteration-title { font-size: 1.1em; font-weight: bold; margin-bottom: 10px; color: #555; border-bottom: 2px solid #eee; padding-bottom: 5px; }
+        
+        .contact-footer { text-align: center; margin-top: 40px; margin-bottom: 20px; padding: 10px; }
+        .contact-footer p { margin: 0 0 5px 0; font-size: 14px; color: #666; font-weight: 600; }
+        .contact-footer img { width: 45px; height: auto; transition: transform 0.2s ease; display: inline-block; }
+        .contact-footer img:hover { transform: scale(1.1); opacity: 0.9; }
+
+        .stats-box { position: fixed; bottom: 10px; left: 10px; background: rgba(255, 255, 255, 0.95); padding: 8px 12px; border: 1px solid #ccc; border-radius: 5px; font-family: sans-serif; font-size: 13px; z-index: 1000; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+    </style>
+</head>
+<body>
+
+    <div style="text-align: center; margin: 20px 0;">
+        <img src="https://i.ibb.co/C3KMKT9N/photo-2023-07-08-02-41-40-2.jpg" alt="Simplex Logo" style="max-width: 100%; max-height: 200px; height: auto; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+    </div>
+
+    <h1>Simplex Method Solver</h1>
+
+    <div class="tab-container">
+        <button class="tab-button active" onclick="openTab(event, 'lp-simplex')">LP Simplex</button>
+        <button class="tab-button" onclick="openTab(event, 'or-simplex')">OR Simplex</button>
+    </div>
+
+    <div id="lp-simplex" class="tool-content active">
+        <h2>LP Simplex (Standard)</h2>
+        <div class="input-section">
+            <div class="input-row">
+                <label>Variables: <input type="number" id="lp_vars" value="2" min="1"></label>
+                <label>Constraints: <input type="number" id="lp_cons" value="2" min="1"></label>
+                <button class="gen-btn" onclick="generateLPInputs()">Generate</button>
+            </div>
+            <div id="lp_matrix_area"></div>
+        </div>
+        <div id="lp_output"></div>
+    </div>
+
+    <div id="or-simplex" class="tool-content">
+        <h2>OR Simplex (Tableau Style)</h2>
+        <div class="input-section">
+            <div class="input-row">
+                <label>Variables (Decision): <input type="number" id="or_vars" value="2" min="1"></label>
+                <label>Constraints: <input type="number" id="or_cons" value="2" min="1"></label>
+                <button class="gen-btn" onclick="generateORInputs()">Generate</button>
+            </div>
+            <div id="or_matrix_area"></div>
+        </div>
+        <div id="or_output"></div>
+    </div>
+
+    <div class="contact-footer">
+        <p>:(Contact Me) للتواصل</p>
+        <a href="https://wa.me/201554531921" target="_blank" title="Chat on WhatsApp">
+            <img src="https://i.ibb.co/VZvZ88M/1000653468.png" alt="WhatsApp">
+        </a>
+    </div>
+
+    <div class="stats-box">
+        <div style="margin-bottom: 4px;">Visits: <span id="visit-count">...</span></div>
+        <div>Solved: <span id="solve-count">...</span></div>
+    </div>
+
+    <script>
+        class Frac {
+            constructor(n, d = 1) {
+                if (d === 0) throw new Error("Division by zero");
+                this.n = n;
+                this.d = d;
+                this.simplify();
+            }
+            simplify() {
+                const g = this.gcd(Math.abs(this.n), Math.abs(this.d));
+                this.n /= g;
+                this.d /= g;
+                if (this.d < 0) { this.n = -this.n; this.d = -this.d; }
+            }
+            gcd(a, b) { return b ? this.gcd(b, a % b) : a; }
+            add(o) { return new Frac(this.n * o.d + o.n * this.d, this.d * o.d); }
+            sub(o) { return new Frac(this.n * o.d - o.n * this.d, this.d * o.d); }
+            mul(o) { return new Frac(this.n * o.n, this.d * o.d); }
+            div(o) { return new Frac(this.n * o.d, this.d * o.n); }
+            lt(o) { return this.n * o.d < o.n * this.d; }
+            gt(o) { return this.n * o.d > o.n * this.d; }
+            eq(o) { return this.n === o.n && this.d === o.d; }
+            val() { return this.n / this.d; }
+            toString() { return this.d === 1 ? `${this.n}` : `${this.n}/${this.d}`; }
+        }
+
+        function parseFrac(val) {
+            if (!val) return new Frac(0);
+            val = val.toString();
+            if (val.includes('/')) {
+                const p = val.split('/');
+                return new Frac(parseInt(p[0]), parseInt(p[1]));
+            } else if (val.includes('.')) {
+                const f = parseFloat(val);
+                const len = val.split('.')[1].length;
+                const d = Math.pow(10, len);
+                return new Frac(Math.round(f * d), d);
+            }
+            return new Frac(parseInt(val));
+        }
+
+        function openTab(evt, tabName) {
+            const contents = document.getElementsByClassName("tool-content");
+            for (let i = 0; i < contents.length; i++) contents[i].classList.remove("active");
+            const tabs = document.getElementsByClassName("tab-button");
+            for (let i = 0; i < tabs.length; i++) tabs[i].classList.remove("active");
+            document.getElementById(tabName).classList.add("active");
+            evt.currentTarget.classList.add("active");
+        }
+
+        const NAMESPACE = 'simplex-visualizer-unique-id';
+        const KEY_VISITS = 'site-visits1';
+        const KEY_SOLVED = 'problems-solved1';
+
+        function initStats() {
+            const hasVisitedSession = sessionStorage.getItem('hasVisitedSession');
+            const visitUrl = hasVisitedSession 
+                ? `https://api.counterapi.dev/v1/${NAMESPACE}/${KEY_VISITS}/` 
+                : `https://api.counterapi.dev/v1/${NAMESPACE}/${KEY_VISITS}/up`;
+
+            fetch(visitUrl)
+                .then(res => res.json())
+                .then(data => {
+                    document.getElementById('visit-count').innerText = data.count;
+                    if (!hasVisitedSession) sessionStorage.setItem('hasVisitedSession', 'true');
+                })
+                .catch(() => document.getElementById('visit-count').innerText = "-");
+
+            fetch(`https://api.counterapi.dev/v1/${NAMESPACE}/${KEY_SOLVED}/`)
+                .then(res => res.json())
+                .then(data => document.getElementById('solve-count').innerText = data.count)
+                .catch(() => document.getElementById('solve-count').innerText = "-");
+        }
+
+        function trackSolve() {
+            fetch(`https://api.counterapi.dev/v1/${NAMESPACE}/${KEY_SOLVED}/up`)
+                .then(res => res.json())
+                .then(data => document.getElementById('solve-count').innerText = data.count)
+                .catch(err => {});
+        }
+
+        initStats();
+
+        let lpVarsCount = 2, lpConsCount = 2;
+        let orVarsCount = 2, orConsCount = 2;
+
+        function generateLPInputs() {
+            lpVarsCount = parseInt(document.getElementById('lp_vars').value);
+            lpConsCount = parseInt(document.getElementById('lp_cons').value);
+            const container = document.getElementById('lp_matrix_area');
+            
+            let html = `<h3>Objective Function (Max Z)</h3><div class="input-row">`;
+            for (let i = 0; i < lpVarsCount; i++) html += `X${i+1}: <input type="text" id="lp_z_${i}" value="0"> `;
+            html += `</div><h3>Constraints (<=)</h3>`;
+            
+            for (let i = 0; i < lpConsCount; i++) {
+                html += `<div class="input-row"><strong>C${i+1}:</strong>`;
+                for (let j = 0; j < lpVarsCount; j++) html += `X${j+1} <input type="text" id="lp_c_${i}_${j}" value="0"> + `;
+                html = html.slice(0, -3);
+                html += `<= <input type="text" id="lp_rhs_${i}" value="0"></div>`;
+            }
+            html += `<button class="action-btn" onclick="solveLP()">Solve LP Simplex</button>`;
+            container.innerHTML = html;
+            document.getElementById('lp_output').innerHTML = "";
+        }
+
+        function solveLP() {
+            trackSolve();
+            const output = document.getElementById('lp_output');
+            output.innerHTML = "";
+            
+            let zCoeffs = [];
+            for(let i=0; i<lpVarsCount; i++) zCoeffs.push(parseFrac(document.getElementById(`lp_z_${i}`).value).mul(new Frac(-1)));
+            
+            let table = [], rhs = [], slackCols = [];
+            for(let i=0; i<lpConsCount; i++) {
+                let row = [];
+                for(let j=0; j<lpVarsCount; j++) row.push(parseFrac(document.getElementById(`lp_c_${i}_${j}`).value));
+                table.push(row);
+                rhs.push(parseFrac(document.getElementById(`lp_rhs_${i}`).value));
+                
+                let sRow = Array(lpConsCount).fill(new Frac(0));
+                sRow[i] = new Frac(1);
+                slackCols.push(sRow);
+            }
+
+            let zSlacks = Array(lpConsCount).fill(new Frac(0));
+            let zVal = new Frac(0);
+            let basicVars = Array.from({length: lpConsCount}, (_, i) => `s${i+1}`);
+            
+            let iter = 1;
+            while(iter <= 20) {
+                let minZ = new Frac(0), pivotCol = -1, isSlack = false;
+                
+                for(let i=0; i<lpVarsCount; i++) {
+                    if(zCoeffs[i].lt(minZ)) { minZ = zCoeffs[i]; pivotCol = i; isSlack = false; }
+                }
+                for(let i=0; i<lpConsCount; i++) {
+                    if(zSlacks[i].lt(minZ)) { minZ = zSlacks[i]; pivotCol = i; isSlack = true; }
+                }
+
+                if(minZ.val() >= -1e-9) break;
+
+                let pivotRow = -1, minRatio = null;
+                for(let i=0; i<lpConsCount; i++) {
+                    let val = isSlack ? slackCols[i][pivotCol] : table[i][pivotCol];
+                    if(val.val() > 0) {
+                        let ratio = rhs[i].div(val);
+                        if(minRatio === null || ratio.lt(minRatio)) { minRatio = ratio; pivotRow = i; }
+                    }
+                }
+
+                if(pivotRow === -1) { output.innerHTML += "<p style='color:red'>Unbounded</p>"; return; }
+
+                let tableHTML = `<div class="iteration-box"><div class="iteration-title">Iteration ${iter}</div>
+                <table class="lp-simplex-table"><tr><th>Basic</th><th>Z</th>`;
+                for(let i=0; i<lpVarsCount; i++) tableHTML += `<th>x${i+1}</th>`;
+                for(let i=0; i<lpConsCount; i++) tableHTML += `<th>s${i+1}</th>`;
+                tableHTML += `<th>RHS</th></tr>`;
+                
+                tableHTML += `<tr><td>Z</td><td>1</td>`;
+                zCoeffs.forEach((v, idx) => tableHTML += `<td class="${!isSlack && idx === pivotCol ? 'pivot-col' : ''}">${v}</td>`);
+                zSlacks.forEach((v, idx) => tableHTML += `<td class="${isSlack && idx === pivotCol ? 'pivot-col' : ''}">${v}</td>`);
+                tableHTML += `<td>${zVal}</td></tr>`;
+
+                for(let r=0; r<lpConsCount; r++) {
+                    tableHTML += `<tr class="${r === pivotRow ? 'pivot-row' : ''}"><td>${basicVars[r]}</td><td>0</td>`;
+                    for(let c=0; c<lpVarsCount; c++) {
+                        let isPiv = (r === pivotRow && !isSlack && c === pivotCol);
+                        let isCol = (!isSlack && c === pivotCol);
+                        tableHTML += `<td class="${isPiv ? 'pivot-element' : (isCol ? 'pivot-col' : '')}">${table[r][c]}</td>`;
+                    }
+                    for(let c=0; c<lpConsCount; c++) {
+                        let isPiv = (r === pivotRow && isSlack && c === pivotCol);
+                        let isCol = (isSlack && c === pivotCol);
+                        tableHTML += `<td class="${isPiv ? 'pivot-element' : (isCol ? 'pivot-col' : '')}">${slackCols[r][c]}</td>`;
+                    }
+                    tableHTML += `<td>${rhs[r]}</td></tr>`;
+                }
+                tableHTML += `</table></div>`;
+                output.innerHTML += tableHTML;
+
+                let pivotVal = isSlack ? slackCols[pivotRow][pivotCol] : table[pivotRow][pivotCol];
+                for(let j=0; j<lpVarsCount; j++) table[pivotRow][j] = table[pivotRow][j].div(pivotVal);
+                for(let j=0; j<lpConsCount; j++) slackCols[pivotRow][j] = slackCols[pivotRow][j].div(pivotVal);
+                rhs[pivotRow] = rhs[pivotRow].div(pivotVal);
+                
+                basicVars[pivotRow] = isSlack ? `s${pivotCol+1}` : `x${pivotCol+1}`;
+
+                for(let i=0; i<lpConsCount; i++) {
+                    if(i !== pivotRow) {
+                        let factor = isSlack ? slackCols[i][pivotCol] : table[i][pivotCol];
+                        for(let j=0; j<lpVarsCount; j++) table[i][j] = table[i][j].sub(factor.mul(table[pivotRow][j]));
+                        for(let j=0; j<lpConsCount; j++) slackCols[i][j] = slackCols[i][j].sub(factor.mul(slackCols[pivotRow][j]));
+                        rhs[i] = rhs[i].sub(factor.mul(rhs[pivotRow]));
+                    }
+                }
+                
+                let zFactor = isSlack ? zSlacks[pivotCol] : zCoeffs[pivotCol];
+                for(let j=0; j<lpVarsCount; j++) zCoeffs[j] = zCoeffs[j].sub(zFactor.mul(table[pivotRow][j]));
+                for(let j=0; j<lpConsCount; j++) zSlacks[j] = zSlacks[j].sub(zFactor.mul(slackCols[pivotRow][j]));
+                zVal = zVal.sub(zFactor.mul(rhs[pivotRow]));
+
+                iter++;
+            }
+            output.innerHTML += `<h3 style="color:green">Optimal Solution: Max Z = ${zVal}</h3>`;
+        }
+
+        function generateORInputs() {
+            orVarsCount = parseInt(document.getElementById('or_vars').value);
+            orConsCount = parseInt(document.getElementById('or_cons').value);
+            const container = document.getElementById('or_matrix_area');
+            
+            let html = `<h3>Objective Function (Max Z)</h3><div class="input-row">`;
+            html += `Maximize Z = `;
+            for (let i = 0; i < orVarsCount; i++) html += `<input type="text" id="or_z_${i}" value="0" placeholder="Coeff"> X${i+1} + `;
+            html = html.slice(0, -3);
+            html += `</div><h3>Constraints (Subject to)</h3>`;
+            
+            for (let i = 0; i < orConsCount; i++) {
+                html += `<div class="input-row">`;
+                for (let j = 0; j < orVarsCount; j++) html += `<input type="text" id="or_c_${i}_${j}" value="0"> X${j+1} + `;
+                html = html.slice(0, -3);
+                html += ` <= <input type="text" id="or_rhs_${i}" value="0"></div>`;
+            }
+            html += `<button class="action-btn" onclick="solveOR()">Solve OR Simplex</button>`;
+            container.innerHTML = html;
+            document.getElementById('or_output').innerHTML = "";
+        }
+
+        function solveOR() {
+            trackSolve();
+            const output = document.getElementById('or_output');
+            output.innerHTML = "";
+
+            let cj = []; 
+            for(let i=0; i<orVarsCount; i++) cj.push(parseFrac(document.getElementById(`or_z_${i}`).value));
+            for(let i=0; i<orConsCount; i++) cj.push(new Frac(0)); 
+
+            let rows = []; 
+            let basicVarsIndices = []; 
+            let rhs = [];
+
+            for(let i=0; i<orConsCount; i++) {
+                let row = [];
+                for(let j=0; j<orVarsCount; j++) row.push(parseFrac(document.getElementById(`or_c_${i}_${j}`).value));
+                for(let s=0; s<orConsCount; s++) row.push(new Frac(s===i ? 1 : 0));
+                rows.push(row);
+                rhs.push(parseFrac(document.getElementById(`or_rhs_${i}`).value));
+                basicVarsIndices.push(orVarsCount + i); 
+            }
+
+            let iter = 1;
+            while(iter <= 20) {
+                let zj = [];
+                let netEval = []; 
+                let totalCols = orVarsCount + orConsCount;
+
+                for(let c=0; c<totalCols; c++) {
+                    let sum = new Frac(0);
+                    for(let r=0; r<orConsCount; r++) {
+                        let basicVarIdx = basicVarsIndices[r];
+                        let cb = cj[basicVarIdx]; 
+                        sum = sum.add(cb.mul(rows[r][c]));
+                    }
+                    zj.push(sum);
+                    netEval.push(cj[c].sub(sum));
+                }
+
+                let zTotal = new Frac(0);
+                for(let r=0; r<orConsCount; r++) {
+                    let basicVarIdx = basicVarsIndices[r];
+                    zTotal = zTotal.add(cj[basicVarIdx].mul(rhs[r]));
+                }
+
+                let maxNet = new Frac(-1000000000); 
+                let pivotCol = -1;
+                for(let c=0; c<totalCols; c++) {
+                    if(netEval[c].gt(maxNet)) {
+                        maxNet = netEval[c];
+                        pivotCol = c;
+                    }
+                }
+
+                let isOptimal = maxNet.val() <= 1e-9; 
+
+                let ratios = [];
+                let pivotRow = -1;
+                let minRatio = null;
+
+                if (!isOptimal) {
+                    for(let r=0; r<orConsCount; r++) {
+                        let val = rows[r][pivotCol];
+                        if(val.val() > 0) {
+                            let ratio = rhs[r].div(val);
+                            ratios.push(ratio);
+                            if(minRatio === null || ratio.lt(minRatio)) {
+                                minRatio = ratio;
+                                pivotRow = r;
+                            }
+                        } else {
+                            ratios.push(null);
+                        }
+                    }
+                }
+
+                let html = `<div class="iteration-box"><div class="iteration-title">Tableau ${iter}</div>`;
+                html += `<table class="or-simplex-table">
+                    <thead>
+                        <tr><th colspan="3"></th>`;
+                for(let c=0; c<totalCols; c++) html += `<th>${cj[c]}</th>`;
+                html += `<th></th></tr>
+                        <tr><th>Cj</th><th>Basic Var</th><th>Quantity</th>`;
+                for(let i=0; i<orVarsCount; i++) html += `<th>x${i+1}</th>`;
+                for(let i=0; i<orConsCount; i++) html += `<th>s${i+1}</th>`;
+                html += `<th>Ratio</th></tr></thead><tbody>`;
+
+                for(let r=0; r<orConsCount; r++) {
+                    let bIdx = basicVarsIndices[r];
+                    let bName = bIdx < orVarsCount ? `x${bIdx+1}` : `s${bIdx-orVarsCount+1}`;
+                    let isPivRow = (r === pivotRow && !isOptimal);
+                    
+                    html += `<tr class="${isPivRow ? 'pivot-row' : ''}">`;
+                    html += `<td>${cj[bIdx]}</td><td>${bName}</td><td>${rhs[r]}</td>`;
+                    
+                    for(let c=0; c<totalCols; c++) {
+                        let isPivCol = (c === pivotCol && !isOptimal);
+                        let isPivElem = (isPivRow && isPivCol);
+                        html += `<td class="${isPivElem ? 'pivot-element' : (isPivCol ? 'pivot-col' : '')}">${rows[r][c]}</td>`;
+                    }
+                    
+                    let ratStr = (ratios[r] !== undefined && ratios[r] !== null) ? ratios[r].toString() : "-";
+                    html += `<td>${ratStr}</td></tr>`;
+                }
+
+                html += `<tr class="zj-row"><td colspan="3" style="text-align:right">Zj</td>`;
+                for(let c=0; c<totalCols; c++) html += `<td>${zj[c]}</td>`;
+                html += `<td>${zTotal}</td></tr>`;
+
+                html += `<tr class="net-row"><td colspan="3" style="text-align:right">Cj - Zj</td>`;
+                for(let c=0; c<totalCols; c++) html += `<td>${netEval[c]}</td>`;
+                html += `<td></td></tr></tbody></table></div>`;
+
+                output.innerHTML += html;
+
+                if (isOptimal) {
+                    output.innerHTML += `<h3 style="color:green; text-align:center;">Optimal Solution Reached! Max Profit Z = $${zTotal}</h3>`;
+                    let varsRes = "";
+                    for(let i=0; i<orVarsCount; i++) {
+                        let val = new Frac(0);
+                        for(let r=0; r<orConsCount; r++) {
+                            if(basicVarsIndices[r] === i) val = rhs[r];
+                        }
+                        varsRes += `x${i+1} = ${val}, `;
+                    }
+                    output.innerHTML += `<p style="text-align:center;">${varsRes.slice(0, -2)}</p>`;
+                    return;
+                }
+
+                if (pivotRow === -1) {
+                    output.innerHTML += `<h3 style="color:red">Problem is Unbounded</h3>`;
+                    return;
+                }
+
+                let pivVal = rows[pivotRow][pivotCol];
+                for(let c=0; c<totalCols; c++) rows[pivotRow][c] = rows[pivotRow][c].div(pivVal);
+                rhs[pivotRow] = rhs[pivotRow].div(pivVal);
+                basicVarsIndices[pivotRow] = pivotCol;
+
+                for(let r=0; r<orConsCount; r++) {
+                    if(r !== pivotRow) {
+                        let factor = rows[r][pivotCol];
+                        for(let c=0; c<totalCols; c++) rows[r][c] = rows[r][c].sub(factor.mul(rows[pivotRow][c]));
+                        rhs[r] = rhs[r].sub(factor.mul(rhs[pivotRow]));
+                    }
+                }
+
+                iter++;
+            }
+        }
+    </script>
+</body>
+</html>
