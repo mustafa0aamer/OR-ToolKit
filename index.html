@@ -536,7 +536,7 @@
             document.getElementById('or-output-area').innerHTML = '';
         }
 
-        function solveOR() {
+function solveOR() {
             trackSolve();
             const output = document.getElementById('or-output-area');
             output.innerHTML = "";
@@ -628,43 +628,24 @@
                 let pivotRow = -1;
                 let minRatio = null;
 
+                // CORRECTED LOGIC START:
+                // If NOT optimal, calculate ratios and find pivot row
                 if (!isOptimal) {
-                   output.innerHTML += `<h3 style="color:green; text-align:center;">Optimal Solution Reached! Max Profit Z = ${zValue}</h3>`;
-                    
-                    // --- START OF NEW CODE: Display X and S values clearly ---
-                    let resBox = `<div style="background: #e0f7fa; padding: 20px; border-radius: 8px; border: 2px solid #00acc1; margin-top: 20px;">`;
-                    
-                    // 1. Get Decision Variables (x)
-                    let xStr = "";
-                    for(let i=0; i<orNumVars; i++) {
-                        let val = new Frac(0);
-                        for(let r=0; r<orNumConstraints; r++) {
-                            // Check if Basic Variable Index matches current X index
-                            if(basicVarsIndices[r] === i) val = rhs[r];
+                    for(let r=0; r<orNumConstraints; r++) {
+                        let val = rows[r][pivotCol];
+                        if(val.val() > 0) {
+                            let ratio = rhs[r].div(val);
+                            ratios.push(ratio);
+                            if(minRatio === null || ratio.lt(minRatio)) {
+                                minRatio = ratio;
+                                pivotRow = r;
+                            }
+                        } else {
+                            ratios.push(null);
                         }
-                        xStr += `<b>x${i+1}</b> = ${val} &nbsp;&nbsp; `;
                     }
-                    resBox += `<p style="font-size: 16px; margin-bottom: 10px; color: #006064;"><strong>Decision Variables:</strong><br> ${xStr}</p>`;
-
-                    // 2. Get Slack Variables (s)
-                    let sStr = "";
-                    for(let i=0; i<orNumConstraints; i++) {
-                        let val = new Frac(0);
-                        let globalIdx = orNumVars + i; // Slacks start after X vars in columns
-                        for(let r=0; r<orNumConstraints; r++) {
-                            // Check if Basic Variable Index matches current S index
-                            if(basicVarsIndices[r] === globalIdx) val = rhs[r];
-                        }
-                        sStr += `<b>s${i+1}</b> = ${val} &nbsp;&nbsp; `;
-                    }
-                    resBox += `<hr style="border-top: 1px solid #b2ebf2;"><p style="font-size: 16px; margin-top: 10px; color: #006064;"><strong>Slack Variables:</strong><br> ${sStr}</p>`;
-                    
-                    resBox += `</div>`;
-                    output.innerHTML += resBox;
-                    // --- END OF NEW CODE ---
-
-                    return;
                 }
+                // CORRECTED LOGIC END
 
                 let enteringName = (!isOptimal && pivotCol !== -1) ? (pivotCol < orNumVars ? `x${pivotCol+1}` : `s${pivotCol-orNumVars+1}`) : "-";
                 let leavingName = (!isOptimal && pivotRow !== -1) ? (basicVarsIndices[pivotRow] < orNumVars ? `x${basicVarsIndices[pivotRow]+1}` : `s${basicVarsIndices[pivotRow]-orNumVars+1}`) : "-";
@@ -726,17 +707,40 @@
 
                 output.innerHTML += html;
 
+                // CORRECTED PLACEMENT: Check for Optimality HERE
                 if (isOptimal) {
-                    output.innerHTML += `<h3 style="color:green; text-align:center;">Optimal Solution Reached! Max Profit Z = $${zValue}</h3>`;
-                    let varsRes = "";
+                    output.innerHTML += `<h3 style="color:green; text-align:center;">Optimal Solution Reached! Max Profit Z = ${zValue}</h3>`;
+                    
+                    // --- Display X and S values ---
+                    let resBox = `<div style="background: #e0f7fa; padding: 20px; border-radius: 8px; border: 2px solid #00acc1; margin-top: 20px;">`;
+                    
+                    // 1. Get Decision Variables (x)
+                    let xStr = "";
                     for(let i=0; i<orNumVars; i++) {
                         let val = new Frac(0);
                         for(let r=0; r<orNumConstraints; r++) {
                             if(basicVarsIndices[r] === i) val = rhs[r];
                         }
-                        varsRes += `x${i+1} = ${val}, `;
+                        xStr += `<b>x${i+1}</b> = ${val} &nbsp;&nbsp; `;
                     }
-                    output.innerHTML += `<p style="text-align:center;">${varsRes.slice(0, -2)}</p>`;
+                    resBox += `<p style="font-size: 16px; margin-bottom: 10px; color: #006064;"><strong>Decision Variables:</strong><br> ${xStr}</p>`;
+
+                    // 2. Get Slack Variables (s)
+                    let sStr = "";
+                    for(let i=0; i<orNumConstraints; i++) {
+                        let val = new Frac(0);
+                        let globalIdx = orNumVars + i; 
+                        for(let r=0; r<orNumConstraints; r++) {
+                            if(basicVarsIndices[r] === globalIdx) val = rhs[r];
+                        }
+                        sStr += `<b>s${i+1}</b> = ${val} &nbsp;&nbsp; `;
+                    }
+                    resBox += `<hr style="border-top: 1px solid #b2ebf2;"><p style="font-size: 16px; margin-top: 10px; color: #006064;"><strong>Slack Variables:</strong><br> ${sStr}</p>`;
+                    
+                    resBox += `</div>`;
+                    output.innerHTML += resBox;
+                    // --- END ---
+
                     return;
                 }
 
