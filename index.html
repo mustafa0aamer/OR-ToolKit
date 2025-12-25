@@ -1330,7 +1330,7 @@ function solveOR() {
                 <h4>Linear Trend Line (Least Squares)</h4>
                 Equation: $y = ${fmt(res.a)} + ${fmt(res.b)}x$ <br>
                 <div style="font-size:0.9em; background:#f8f9fa; padding:5px; margin:5px 0;">
-                    Steps: $\\bar{x}=${fmt(res.xBar)}, \\bar{y}=${fmt(res.yBar)}, b=\\frac{${fmt(res.sumXY)} - ${res.n}(${fmt(res.xBar}})(${fmt(res.yBar}})}{${fmt(res.sumX2)} - ${res.n}(${fmt(res.xBar}})^2} = ${fmt(res.b)}$
+                    Steps: $\\bar{x}=${fmt(res.xBar)}, \\bar{y}=${fmt(res.yBar)}, b=\\frac{${fmt(res.sumXY)} - ${res.n}(${fmt(res.xBar})(${fmt(res.yBar}})}{${fmt(res.sumX2)} - ${res.n}(${fmt(res.xBar}})^2} = ${fmt(res.b)}$
                 </div>
                 <table><thead><tr><th>${xName} (x)</th><th>${yName} (y)</th><th>Forecast ($y=a+bx$)</th></tr></thead><tbody>`;
             
