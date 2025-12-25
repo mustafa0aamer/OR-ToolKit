@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Simplex Method Suite</title>
     <style>
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; padding: 20px; max-width: 1000px; margin: auto; background-color: #f9f9f9; color: #333; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; padding: 20px; max-width: 1100px; margin: auto; background-color: #f9f9f9; color: #333; }
         h1, h2, h3 { color: #333; text-align: center; }
         
         .tab-container { display: flex; justify-content: center; margin-bottom: 20px; }
@@ -26,19 +26,27 @@
         table { border-collapse: collapse; width: 100%; margin: 15px 0; font-size: 14px; background: white; }
         th, td { border: 1px solid #ddd; padding: 8px; text-align: center; }
         
-        /* LP Simplex Styles (Original) */
         .lp-pivot-col { background-color: #e6f7ff; }
         .lp-pivot-row { background-color: #fff0f0; }
         .lp-pivot-element { background-color: #ffeb3b; font-weight: bold; border: 2px solid #ff9800; }
         .lp-optimal-res { color: green; font-weight: bold; font-size: 1.2em; }
         
-        /* OR Simplex Styles (Lecture Style - Softer) */
-        .or-table th { background-color: #f8f9fa; color: #333; font-weight: 600; border-bottom: 2px solid #dee2e6; }
-        .or-pivot-col { background-color: #f0fdf4; border-left: 2px solid #86efac; border-right: 2px solid #86efac; }
-        .or-pivot-row { background-color: #fff7ed; border-top: 2px solid #fdba74; border-bottom: 2px solid #fdba74; }
-        .or-pivot-element { background-color: #fde68a; font-weight: bold; border: 2px solid #f59e0b; color: #451a03; }
-        .or-bottom-row td { font-weight: bold; background-color: #fcfcfc; color: #555; }
+        .or-table { border: none; }
+        .or-table th { background-color: white; color: #333; font-weight: bold; border: none; border-bottom: 2px solid #00bcd4; padding: 10px; }
+        .or-table td { border: none; border-bottom: 1px solid #eee; padding: 10px; }
+        .or-table .top-cj-row th { border-bottom: none; color: #333; font-weight: bold; }
+        .or-table .header-row th { color: #555; border-top: 2px solid #00bcd4; border-bottom: 2px solid #00bcd4; background-color: #e0f7fa; }
+        
+        .or-pivot-col { background-color: #e3f2fd; }
+        .or-pivot-row { background-color: #fff3e0; }
+        .or-pivot-element { background-color: #ffe082; font-weight: bold; border: 1px solid #ffca28; }
+        
+        .or-bottom-row td { font-weight: bold; border-top: 2px solid #00bcd4; color: #555; }
+        .or-zj-label, .or-cjzj-label { font-style: italic; color: #0097a7; }
+
         .or-iter-info { background-color: #eef2ff; padding: 10px; border-radius: 5px; border-left: 4px solid #6366f1; margin-bottom: 10px; font-weight: 500; }
+        
+        .standard-form-box { background-color: #fff; padding: 20px; border-radius: 8px; border: 1px solid #e0e0e0; margin-bottom: 25px; font-family: "Times New Roman", Times, serif; font-size: 1.1em; line-height: 1.6; }
 
         .iteration-box { border: 1px solid #ccc; padding: 15px; margin-bottom: 20px; background: white; }
 
@@ -63,7 +71,6 @@
         <button class="tab-button" onclick="openTab(event, 'or-simplex')">OR Simplex</button>
     </div>
 
-    <!-- LP SIMPLEX TOOL (Original style, Fractions logic) -->
     <div id="lp-simplex" class="tool-content active">
         <div class="config-section">
             <h3>Configuration</h3>
@@ -83,7 +90,6 @@
         <div id="lp-output-area"></div>
     </div>
 
-    <!-- OR SIMPLEX TOOL (Lecture style) -->
     <div id="or-simplex" class="tool-content">
         <div class="config-section">
             <h3>Configuration</h3>
@@ -193,9 +199,6 @@
 
         initStats();
 
-        // ---------------------------------------------------------
-        // LP SIMPLEX LOGIC (ORIGINAL + FRACTIONS)
-        // ---------------------------------------------------------
         let lpNumVars = 0, lpNumConstraints = 0;
 
         function generateLPInputs() {
@@ -252,7 +255,6 @@
             }
 
             let zSlacks = new Array(lpNumConstraints).fill(new Frac(0));
-            // Convert Z to minimize logic for the table: coeff * -1
             let currentZRowVars = zVars.map(v => v.mul(new Frac(-1)));
             let currentZRowSlacks = zSlacks.map(v => new Frac(0));
 
@@ -262,7 +264,6 @@
                 basicVarNames.push(`s${i+1}`);
             }
 
-            // Augmented Form Display
             let augHTML = `<h3>Augmented Form</h3><div style="background:#fff; border:1px solid #ccc; padding:15px; font-family:'Courier New', monospace; margin-bottom:20px; line-height: 1.6;">(0) Z`;
             for(let i=0; i<lpNumVars; i++) {
                 let val = currentZRowVars[i];
@@ -287,7 +288,6 @@
                 let enteringIsSlack = false;
                 let enterSlackIdx = -1;
 
-                // Find entering variable (most negative in Z row)
                 for (let i = 0; i < lpNumVars; i++) {
                     if (currentZRowVars[i].lt(zRowMini)) {
                         zRowMini = currentZRowVars[i];
@@ -305,7 +305,6 @@
                 }
 
                 if (zRowMini.val() >= -1e-9) {
-                    // Optimal Reached
                     let finalHTML = `<div class="iteration-box" style="border: 2px solid green; background-color: #f0fff0;"><h4 style="color: green;">Final Optimal Tableau</h4><table><tr><th>Basic</th><th>Z</th>`;
                     for(let j=0; j<lpNumVars; j++) finalHTML += `<th>x${j+1}</th>`;
                     for(let j=0; j<lpNumConstraints; j++) finalHTML += `<th>s${j+1}</th>`;
@@ -380,7 +379,6 @@
                 tableHTML += `</table></div>`;
                 outputDiv.innerHTML += tableHTML;
 
-                // Pivot Calculations
                 let pivotElement = enteringIsSlack ? slacksCo[leaveRow][enterSlackIdx] : constraintsCo[leaveRow][enterCol];
                 for (let j = 0; j < lpNumVars; j++) constraintsCo[leaveRow][j] = constraintsCo[leaveRow][j].div(pivotElement);
                 for (let j = 0; j < lpNumConstraints; j++) slacksCo[leaveRow][j] = slacksCo[leaveRow][j].div(pivotElement);
@@ -404,9 +402,6 @@
             }
         }
 
-        // ---------------------------------------------------------
-        // OR SIMPLEX LOGIC (LECTURE STYLE)
-        // ---------------------------------------------------------
         let orNumVars = 0, orNumConstraints = 0;
 
         function generateORInputs() {
@@ -458,13 +453,32 @@
                 basicVarsIndices.push(orNumVars + i); 
             }
 
+            let standardFormHTML = `<div class="standard-form-box"><h3>Standard Form</h3>`;
+            standardFormHTML += `<p>maximize Z = `;
+            for(let i=0; i<orNumVars; i++) standardFormHTML += `$${cj_array[i]}x_${i+1} + `;
+            for(let i=0; i<orNumConstraints; i++) standardFormHTML += `$0s_${i+1} ${i < orNumConstraints-1 ? '+ ' : ''}`;
+            standardFormHTML += `</p><p>subject to</p>`;
+            
+            for(let i=0; i<orNumConstraints; i++) {
+                standardFormHTML += `<p>`;
+                for(let j=0; j<orNumVars; j++) standardFormHTML += `${rows[i][j]}x_${j+1} + `;
+                for(let s=0; s<orNumConstraints; s++) {
+                    if(rows[i][orNumVars+s].val() !== 0) standardFormHTML += `s_${s+1}`;
+                }
+                standardFormHTML += ` = ${rhs[i]}</p>`;
+            }
+            standardFormHTML += `<p>`;
+            for(let i=0; i<orNumVars; i++) standardFormHTML += `x_${i+1}, `;
+            for(let i=0; i<orNumConstraints; i++) standardFormHTML += `s_${i+1}${i < orNumConstraints-1 ? ', ' : ''}`;
+            standardFormHTML += ` ≥ 0</p></div>`;
+            output.innerHTML += standardFormHTML;
+
             let iter = 1;
             while(iter <= 20) {
                 let zj = [];
                 let cj_zj = []; 
                 let totalCols = orNumVars + orNumConstraints;
 
-                // Calculate Zj and Cj-Zj
                 for(let c=0; c<totalCols; c++) {
                     let sum = new Frac(0);
                     for(let r=0; r<orNumConstraints; r++) {
@@ -482,7 +496,6 @@
                     zValue = zValue.add(cj_array[basicVarIdx].mul(rhs[r]));
                 }
 
-                // Determine Entering (Max Positive Cj - Zj)
                 let maxNet = new Frac(-100000); 
                 let pivotCol = -1;
                 for(let c=0; c<totalCols; c++) {
@@ -514,7 +527,6 @@
                     }
                 }
 
-                // Build HTML
                 let enteringName = (!isOptimal && pivotCol !== -1) ? (pivotCol < orNumVars ? `x${pivotCol+1}` : `s${pivotCol-orNumVars+1}`) : "-";
                 let leavingName = (!isOptimal && pivotRow !== -1) ? (basicVarsIndices[pivotRow] < orNumVars ? `x${basicVarsIndices[pivotRow]+1}` : `s${basicVarsIndices[pivotRow]-orNumVars+1}`) : "-";
 
@@ -526,11 +538,12 @@
 
                 html += `<table class="or-table">
                     <thead>
-                        <tr>
+                        <tr class="top-cj-row">
                             <th colspan="3" style="text-align:right;">Cj</th>`;
                         for(let c=0; c<totalCols; c++) html += `<th>${cj_array[c]}</th>`;
                 html += `<th></th></tr>
-                        <tr>
+                        <tr class="header-row">
+                            <th>Cj</th>
                             <th>Basic Variables</th>
                             <th>Quantity</th>`;
                 for(let i=0; i<orNumVars; i++) html += `<th>x${i+1}</th>`;
@@ -546,7 +559,7 @@
                     let isPivRow = (r === pivotRow && !isOptimal);
                     
                     html += `<tr class="${isPivRow ? 'or-pivot-row' : ''}">`;
-                    html += `<td>${bName}</td><td>${rhs[r]}</td>`;
+                    html += `<td>${cj_array[bIdx]}</td><td>${bName}</td><td>${rhs[r]}</td>`;
                     
                     for(let c=0; c<totalCols; c++) {
                         let isPivCol = (c === pivotCol && !isOptimal);
@@ -558,13 +571,17 @@
                     html += `<td>${ratStr}</td></tr>`;
                 }
 
-                // Zj Row
-                html += `<tr class="or-bottom-row"><td>Zj</td><td>${zValue}</td>`;
+                html += `<tr class="or-bottom-row">
+                            <td></td>
+                            <td class="or-zj-label">Zj</td>
+                            <td>${zValue}</td>`;
                 for(let c=0; c<totalCols; c++) html += `<td>${zj[c]}</td>`;
                 html += `<td></td></tr>`;
 
-                // Cj - Zj Row
-                html += `<tr class="or-bottom-row"><td>Cj - Zj</td><td></td>`;
+                html += `<tr class="or-bottom-row">
+                            <td></td>
+                            <td class="or-cjzj-label">Cj - Zj</td>
+                            <td></td>`;
                 for(let c=0; c<totalCols; c++) html += `<td>${cj_zj[c]}</td>`;
                 html += `<td></td></tr></tbody></table></div>`;
 
@@ -589,7 +606,6 @@
                     return;
                 }
 
-                // Math for next iteration
                 let pivVal = rows[pivotRow][pivotCol];
                 for(let c=0; c<totalCols; c++) rows[pivotRow][c] = rows[pivotRow][c].div(pivVal);
                 rhs[pivotRow] = rhs[pivotRow].div(pivVal);
