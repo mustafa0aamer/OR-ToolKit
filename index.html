@@ -141,15 +141,60 @@
     <!-- ========================================== -->
     <!-- TOOL 2: OR Forecasting (Placeholder)      -->
     <!-- ========================================== -->
-   <div id="or-forecasting" class="tool-content">
+  <div id="or-forecasting" class="tool-content">
         <h2 style="border-bottom: 2px solid #28a745; padding-bottom: 10px; color: #28a745;">[OR] Forecasting Calculator</h2>
         
         <div class="config-section">
             <h3>1. Configuration</h3>
+            
             <div class="input-row">
                 <label>Number of Periods (Rows): <input type="number" id="fc_numPeriods" value="5" min="2"></label>
             </div>
             
+            <!-- Time Unit Selection -->
+            <div class="input-row" style="background: #f1f8ff; padding: 10px; border-radius: 5px;">
+                <span style="font-weight: bold; margin-right: 10px;">Time Labels:</span>
+                
+                <label style="margin-right: 15px;">
+                    <input type="radio" name="fc_timeUnit" value="generic" checked onclick="toggleDateInput()"> 
+                    Generic (1, 2, 3...)
+                </label>
+                
+                <label style="margin-right: 15px;">
+                    <input type="radio" name="fc_timeUnit" value="years" onclick="toggleDateInput()"> 
+                    Years
+                </label>
+                
+                <label>
+                    <input type="radio" name="fc_timeUnit" value="months" onclick="toggleDateInput()"> 
+                    Months
+                </label>
+                
+                <!-- Dynamic Start Input -->
+                <span id="fc_start_year_span" style="display:none; margin-left: 10px;">
+                    Start Year: <input type="number" id="fc_startYear" value="2020" style="width: 70px;">
+                </span>
+
+                <span id="fc_start_month_span" style="display:none; margin-left: 10px;">
+                    Start Month: 
+                    <select id="fc_startMonth" style="padding: 5px;">
+                        <option value="0">January</option>
+                        <option value="1">February</option>
+                        <option value="2">March</option>
+                        <option value="3">April</option>
+                        <option value="4">May</option>
+                        <option value="5">June</option>
+                        <option value="6">July</option>
+                        <option value="7">August</option>
+                        <option value="8">September</option>
+                        <option value="9">October</option>
+                        <option value="10">November</option>
+                        <option value="11">December</option>
+                    </select>
+                </span>
+            </div>
+
+            <!-- Seasonal Option -->
             <div class="input-row" style="margin-top: 10px; border-top: 1px dashed #ccc; padding-top: 10px;">
                 <label style="margin-right: 15px;">
                     <input type="checkbox" id="fc_isSeasonal" onchange="toggleSeasonalInput()"> 
@@ -159,24 +204,20 @@
                     Number of Seasons (Parts): <input type="number" id="fc_seasonParts" value="4" min="2" style="width: 50px;">
                 </span>
             </div>
-
-            <div class="input-row" style="margin-top: 10px;">
-                <span style="margin-right: 10px; font-weight: bold;">Time Unit:</span>
-                <label style="margin-right: 10px;"><input type="radio" name="fc_timeUnit" value="generic" checked onclick="toggleDateInput()"> Generic (1, 2...)</label>
-                <label style="margin-right: 10px;"><input type="radio" name="fc_timeUnit" value="years" onclick="toggleDateInput()"> Years</label>
-                <label><input type="radio" name="fc_timeUnit" value="months" onclick="toggleDateInput()"> Months</label>
-                
-                <span id="fc_start_val_container" style="display:none; margin-left: 10px;">
-                    Start: <input type="text" id="fc_startVal" placeholder="e.g. 1999 or Jan">
-                </span>
-            </div>
-
+            
             <button onclick="generateForecastingTable()" style="background-color: #28a745;">Generate Table</button>
         </div>
 
         <div id="fc-data-section" class="input-section" style="display:none;">
             <h3>2. Data Entry</h3>
             
+            <!-- Output Format Option -->
+            <div style="text-align:center; margin-bottom: 10px; padding: 5px; background: #eee; border-radius: 4px;">
+                <strong>Output Format:</strong> 
+                <label style="margin-left: 10px;"><input type="checkbox" id="fc_use_frac"> Show as Fractions</label>
+                <span style="font-size: 0.9em; color: #666; margin-left: 10px;">(Unchecked = Decimals .00)</span>
+            </div>
+
             <div style="margin-bottom: 15px; text-align: center;">
                 <label>Column Name (X): <input type="text" id="fc_header_x" value="Period" style="width: 100px;"></label>
                 <label>Column Name (Y): <input type="text" id="fc_header_y" value="Demand" style="width: 100px;"></label>
@@ -202,13 +243,13 @@
 
             <!-- Accuracy Selection -->
             <div style="background: #fff3cd; padding: 15px; border-radius: 5px; border: 1px solid #ffeeba;">
-                <h4 style="margin-top: 0;">4. Accuracy Measures</h4>
+                <h4 style="margin-top: 0;">4. Accuracy Measures (Detailed Tables)</h4>
                 <label style="display:block; margin-bottom:5px; border-bottom:1px solid #faeacc;">
                     <input type="checkbox" onchange="toggleAllFC(this, 'fc_acc')"> Select All Measures
                 </label>
                 <div style="display: flex; flex-wrap: wrap; gap: 15px;">
-                    <label><input type="checkbox" class="fc_acc" value="MAD"> MAD</label>
-                    <label><input type="checkbox" class="fc_acc" value="MAPD"> MAPD (MAPE)</label>
+                    <label><input type="checkbox" class="fc_acc" value="MAD"> MAD (Abs Deviation)</label>
+                    <label><input type="checkbox" class="fc_acc" value="MAPD"> MAPD/MAPE (%)</label>
                     <label><input type="checkbox" class="fc_acc" value="E"> Cumulative Error (E)</label>
                     <label><input type="checkbox" class="fc_acc" value="EBAR"> Average Error (Bias)</label>
                 </div>
@@ -822,9 +863,9 @@
         // ==========================================
 
         let fc_is_seasonal = false;
-        let fc_data_rows = 0;
         let fc_season_count = 1;
-        
+
+        // UI Helpers
         function toggleSeasonalInput() {
             const chk = document.getElementById('fc_isSeasonal');
             document.getElementById('fc_season_config').style.display = chk.checked ? 'inline' : 'none';
@@ -844,7 +885,9 @@
             const units = document.getElementsByName('fc_timeUnit');
             let val = 'generic';
             for(let u of units) if(u.checked) val = u.value;
-            document.getElementById('fc_start_val_container').style.display = (val !== 'generic') ? 'inline' : 'none';
+            
+            document.getElementById('fc_start_year_span').style.display = (val === 'years') ? 'inline' : 'none';
+            document.getElementById('fc_start_month_span').style.display = (val === 'months') ? 'inline' : 'none';
         }
 
         function toggleAllFC(source, className) {
@@ -854,58 +897,83 @@
             }
         }
 
+        // Formatting Value based on User Preference
+        function fmtFC(num) {
+            if (num === null || num === undefined) return "-";
+            const useFrac = document.getElementById('fc_use_frac').checked;
+            
+            if (useFrac) {
+                // Try to convert to fraction
+                try {
+                    // Handle float to approx fraction for display
+                    if (Number.isInteger(num)) return num.toString();
+                    let f = new Frac(Math.round(num * 1000), 1000); // approx precision
+                    f.simplify();
+                    return f.toString();
+                } catch(e) { return num.toFixed(2); }
+            } else {
+                return parseFloat(num).toFixed(2);
+            }
+        }
+
         function generateForecastingTable() {
-            fc_data_rows = parseInt(document.getElementById('fc_numPeriods').value);
+            const rows = parseInt(document.getElementById('fc_numPeriods').value);
             fc_is_seasonal = document.getElementById('fc_isSeasonal').checked;
             fc_season_count = fc_is_seasonal ? parseInt(document.getElementById('fc_seasonParts').value) : 1;
 
-            let labels = [];
+            // Generate Time Labels
+            let timeLabels = [];
             const unit = document.querySelector('input[name="fc_timeUnit"]:checked').value;
-            let startVal = document.getElementById('fc_startVal').value;
-
+            
             if (unit === 'generic') {
-                for(let i=1; i<=fc_data_rows; i++) labels.push(i);
+                for(let i=0; i<rows; i++) timeLabels.push("-");
             } else if (unit === 'years') {
-                let s = parseInt(startVal) || 2000;
-                for(let i=0; i<fc_data_rows; i++) labels.push(s + i);
-            } else {
+                let startYear = parseInt(document.getElementById('fc_startYear').value) || 2020;
+                for(let i=0; i<rows; i++) timeLabels.push(startYear + i);
+            } else if (unit === 'months') {
                 const months = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
-                let sIdx = months.indexOf(startVal.substring(0,3));
-                if(sIdx === -1) sIdx = 0;
-                for(let i=0; i<fc_data_rows; i++) {
-                    labels.push(months[(sIdx + i) % 12]);
+                let startM = parseInt(document.getElementById('fc_startMonth').value);
+                for(let i=0; i<rows; i++) {
+                    timeLabels.push(months[(startM + i) % 12]);
                 }
             }
 
-            let tableHTML = `<table id="fc_input_table"><thead><tr><th style="background:#e9ecef;">Period</th>`;
+            let html = `<table id="fc_input_table"><thead><tr>
+                <th style="background:#e9ecef; width:50px;">#</th>`;
+            
+            if (unit !== 'generic') {
+                html += `<th style="background:#e9ecef;">Time (${unit})</th>`;
+            }
             
             if (fc_is_seasonal) {
-                for(let j=1; j<=fc_season_count; j++) {
-                    tableHTML += `<th>Season ${j}</th>`;
-                }
-                tableHTML += `<th style="background:#f0f0f0; color:#555;">Total (Calc)</th>`;
+                for(let j=1; j<=fc_season_count; j++) html += `<th>Season ${j}</th>`;
+                html += `<th style="background:#f0f0f0; color:#555;">Total (Calc)</th>`;
             } else {
-                tableHTML += `<th>Data (Demand)</th>`;
+                html += `<th>Data (Demand)</th>`;
             }
-            tableHTML += `</tr></thead><tbody>`;
+            html += `</tr></thead><tbody>`;
 
-            for(let i=0; i<fc_data_rows; i++) {
-                tableHTML += `<tr>`;
-                tableHTML += `<td><input type="text" value="${labels[i]}" readonly style="background:#f9f9f9; border:none; font-weight:bold;"></td>`;
+            for(let i=0; i<rows; i++) {
+                html += `<tr>`;
+                html += `<td>${i+1}</td>`; // Serial 1..n
                 
+                if (unit !== 'generic') {
+                    html += `<td><input type="text" value="${timeLabels[i]}" readonly style="background:#f9f9f9; border:none; text-align:center;"></td>`;
+                }
+
                 if (fc_is_seasonal) {
                     for(let j=0; j<fc_season_count; j++) {
-                        tableHTML += `<td><input type="number" id="fc_d_${i}_${j}" class="fc-data-input" oninput="fcUpdateRowTotal(${i})" placeholder="0"></td>`;
+                        html += `<td><input type="number" id="fc_d_${i}_${j}" class="fc-data-input" oninput="fcUpdateRowTotal(${i})" placeholder="0"></td>`;
                     }
-                    tableHTML += `<td id="fc_total_${i}" style="font-weight:bold; color:#28a745;">0</td>`;
+                    html += `<td id="fc_total_${i}" style="font-weight:bold; color:#28a745;">0</td>`;
                 } else {
-                    tableHTML += `<td><input type="number" id="fc_d_${i}" class="fc-data-input" placeholder="0"></td>`;
+                    html += `<td><input type="number" id="fc_d_${i}" class="fc-data-input" placeholder="0"></td>`;
                 }
-                tableHTML += `</tr>`;
+                html += `</tr>`;
             }
-            tableHTML += `</tbody></table>`;
+            html += `</tbody></table>`;
 
-            document.getElementById('fc-table-container').innerHTML = tableHTML;
+            document.getElementById('fc-table-container').innerHTML = html;
             document.getElementById('fc-data-section').style.display = 'block';
             document.getElementById('fc-output-area').innerHTML = '';
         }
@@ -919,23 +987,27 @@
             document.getElementById(`fc_total_${rowIdx}`).innerText = sum;
         }
 
-        // ==========================================
-        // SOLVERS
-        // ==========================================
-        
-        const fmt = (n) => (n !== null && n !== undefined) ? parseFloat(n).toFixed(2) : "-";
-
+        // --- Data Extraction ---
         function getFCData() {
             let periods = [];
+            let timeLabels = [];
             let demands = [];
-            let seasonalData = []; 
+            let seasonalData = [];
+            const unit = document.querySelector('input[name="fc_timeUnit"]:checked').value;
+            const hasTimeCol = (unit !== 'generic');
 
             const table = document.getElementById('fc_input_table');
             const rows = table.querySelectorAll('tbody tr');
 
             rows.forEach((tr, idx) => {
-                const pLabel = tr.cells[0].querySelector('input').value;
-                periods.push(pLabel);
+                periods.push(idx + 1); // 1-based index
+                
+                // If time col exists, it's cell 1, else generic
+                if (hasTimeCol) {
+                    timeLabels.push(tr.cells[1].querySelector('input').value);
+                } else {
+                    timeLabels.push((idx+1).toString());
+                }
 
                 if(fc_is_seasonal) {
                     let sRow = [];
@@ -948,51 +1020,38 @@
                     seasonalData.push(sRow);
                     demands.push(total);
                 } else {
-                    let val = parseFloat(document.getElementById(`fc_d_${idx}`).value) || 0;
+                    let input = tr.querySelector('.fc-data-input');
+                    let val = parseFloat(input ? input.value : 0) || 0;
                     demands.push(val);
                 }
             });
 
-            return { periods, demands, seasonalData };
+            return { periods, timeLabels, demands, seasonalData, unit };
         }
 
+        // --- MAIN SOLVER ---
         function solveForecasting() {
-            trackSolve(); // Analytics
+            trackSolve();
 
-            // --- CRITICAL FIX: READ PARAMETERS BEFORE CLEARING OUTPUT ---
-            // We must read potential existing parameters now, otherwise clearing innerHTML destroys them.
-            // MA
-            let ma_n = 3;
-            let elMA = document.getElementById('fc_param_ma_n');
-            if(elMA) ma_n = parseInt(elMA.value);
+            // 1. Capture Inputs (Persistence)
+            const getVal = (id, def) => { const el = document.getElementById(id); return el ? parseFloat(el.value) : def; }
             
-            // WMA
-            let wma_n = 3;
-            let elWMAN = document.getElementById('fc_param_wma_n');
-            if(elWMAN) wma_n = parseInt(elWMAN.value);
-            let wma_weights = [];
-            if(elWMAN) {
-                for(let k=0; k<wma_n; k++) {
-                    let elW = document.getElementById(`fc_wma_w_${k}`);
-                    if(elW) wma_weights.push(parseFloat(elW.value));
+            let config = {
+                ma_n: getVal('fc_param_ma_n', 3),
+                wma_n: getVal('fc_param_wma_n', 3),
+                wma_weights: [],
+                ses_alpha: getVal('fc_ses_alpha', 0.3),
+                aes_alpha: getVal('fc_aes_alpha', 0.5),
+                aes_beta: getVal('fc_aes_beta', 0.3)
+            };
+
+            // Capture WMA Weights specifically
+            if(document.getElementById('fc_param_wma_n')) {
+                for(let k=0; k<config.wma_n; k++) {
+                    let wEl = document.getElementById(`fc_wma_w_${k}`);
+                    if(wEl) config.wma_weights.push(parseFloat(wEl.value));
                 }
             }
-            
-            // SES
-            let ses_alpha = 0.3;
-            let elSES = document.getElementById('fc_ses_alpha');
-            if(elSES) ses_alpha = parseFloat(elSES.value);
-            
-            // AES
-            let aes_alpha = 0.5, aes_beta = 0.3;
-            let elAESA = document.getElementById('fc_aes_alpha');
-            let elAESB = document.getElementById('fc_aes_beta');
-            if(elAESA) aes_alpha = parseFloat(elAESA.value);
-            if(elAESB) aes_beta = parseFloat(elAESB.value);
-
-            // Create config object to pass down
-            const config = { ma_n, wma_n, wma_weights, ses_alpha, aes_alpha, aes_beta };
-            // -----------------------------------------------------------
 
             const out = document.getElementById('fc-output-area');
             out.innerHTML = "";
@@ -1000,7 +1059,6 @@
             const dataObj = getFCData();
             const methods = Array.from(document.querySelectorAll('.fc_method:checked')).map(c => c.value);
             const accs = Array.from(document.querySelectorAll('.fc_acc:checked')).map(c => c.value);
-
             const xName = document.getElementById('fc_header_x').value || "Period";
             const yName = document.getElementById('fc_header_y').value || "Demand";
 
@@ -1022,54 +1080,103 @@
             if(methods.includes("SA") && fc_is_seasonal) renderSA(out, dataObj, accs, xName, yName, ltlResult);
         }
 
-        // --- SOLVER RENDERERS ---
+        // ==========================================
+        // RENDERERS
+        // ==========================================
 
-        function buildAccTable(actuals, forecasts, accs) {
+        function buildDetailedAccTable(actuals, forecasts, accs, methodTitle) {
             if(accs.length === 0) return "";
             
-            let madSum=0, mapdSum=0, eSum=0, count=0;
-            let n = 0;
+            let html = `<div style="margin-top:10px; border: 1px solid #ffeeba; border-radius: 5px; overflow: hidden;">
+                <div style="background:#fff3cd; padding:8px; font-weight:bold; border-bottom:1px solid #ffeeba;">Accuracy Details (${methodTitle})</div>
+                <table style="font-size:13px; margin:0;"><thead><tr>
+                    <th>Period</th><th>Actual (D)</th><th>Forecast (F)</th>`;
+            
+            if(accs.includes("E") || accs.includes("EBAR")) html += `<th>Error (e = D-F)</th>`;
+            if(accs.includes("MAD")) html += `<th>|e|</th>`;
+            if(accs.includes("MAPD")) html += `<th>|e|/D</th>`;
+            if(accs.includes("E")) html += `<th>Cumul E</th>`;
+            
+            html += `</tr></thead><tbody>`;
+
+            let sumE=0, sumAbsE=0, sumPctE=0, count=0;
             
             for(let i=0; i<actuals.length; i++) {
                 if(forecasts[i] !== null) {
-                    let err = actuals[i] - forecasts[i];
-                    let absErr = Math.abs(err);
-                    madSum += absErr;
-                    if(actuals[i] !== 0) mapdSum += (absErr / actuals[i]);
-                    eSum += err;
-                    n++;
+                    let D = actuals[i];
+                    let F = forecasts[i];
+                    let e = D - F;
+                    let absE = Math.abs(e);
+                    let pctE = D !== 0 ? absE / D : 0;
+                    
+                    sumE += e;
+                    sumAbsE += absE;
+                    sumPctE += pctE;
+                    count++;
+
+                    html += `<tr>
+                        <td>${i+1}</td>
+                        <td>${fmtFC(D)}</td>
+                        <td>${fmtFC(F)}</td>`;
+                    
+                    if(accs.includes("E") || accs.includes("EBAR")) html += `<td style="color:${e<0?'red':'green'}">${fmtFC(e)}</td>`;
+                    if(accs.includes("MAD")) html += `<td>${fmtFC(absE)}</td>`;
+                    if(accs.includes("MAPD")) html += `<td>${fmtFC(pctE)}</td>`;
+                    if(accs.includes("E")) html += `<td>${fmtFC(sumE)}</td>`;
+                    
+                    html += `</tr>`;
+                } else {
+                    // Empty row for periods with no forecast
+                    html += `<tr><td>${i+1}</td><td>${fmtFC(actuals[i])}</td><td>-</td><td colspan="${accs.length + 1}" style="background:#f9f9f9;"></td></tr>`;
                 }
             }
             
-            if(n===0) return "";
+            // Summary Row
+            let mad = count ? sumAbsE/count : 0;
+            let mapd = count ? (sumPctE/count)*100 : 0;
+            let bias = count ? sumE/count : 0;
 
-            let mad = madSum / n;
-            let mapd = (mapdSum / n) * 100;
-            let eBar = eSum / n; // Bias
-
-            let html = `<div style="margin-top:10px; background:#fff3cd; padding:10px; border:1px solid #ffeeba;"><strong>Accuracy:</strong> `;
-            if(accs.includes("MAD")) html += `MAD = ${fmt(mad)} | `;
-            if(accs.includes("MAPD")) html += `MAPD = ${fmt(mapd)}% | `;
-            if(accs.includes("E")) html += `Cumulative Error (E) = ${fmt(eSum)} | `;
-            if(accs.includes("EBAR")) html += `Bias (E-bar) = ${fmt(eBar)}`;
-            html += `</div>`;
+            html += `<tr style="font-weight:bold; background:#fffbf2; border-top:2px solid #e0e0e0;">
+                <td colspan="3" style="text-align:right;">Results:</td>`;
+            
+            let details = [];
+            if(accs.includes("E") || accs.includes("EBAR")) {
+                html += `<td>Avg (Bias) = ${fmtFC(bias)}</td>`;
+                details.push(`Bias: ${fmtFC(bias)}`);
+            }
+            if(accs.includes("MAD")) {
+                html += `<td>MAD = ${fmtFC(mad)}</td>`;
+                details.push(`MAD: ${fmtFC(mad)}`);
+            }
+            if(accs.includes("MAPD")) {
+                html += `<td>MAPD = ${fmtFC(mapd)}%</td>`;
+                details.push(`MAPD: ${fmtFC(mapd)}%`);
+            }
+            if(accs.includes("E")) {
+                 html += `<td>Sum = ${fmtFC(sumE)}</td>`;
+                 details.push(`Total Error: ${fmtFC(sumE)}`);
+            }
+            html += `</tr></tbody></table></div>`;
             return html;
         }
 
         // --- 1. Moving Average ---
         function renderMA(container, data, accs, xName, yName, config) {
-            let n = config.ma_n;
-
+            let n = config.ma_n; 
+            // Constraint: n cannot be > total periods for historical check, but we allow it for next period forecast logic.
+            
             let forecasts = Array(data.demands.length).fill(null);
-            for(let i = n; i < data.demands.length + 1; i++) {
-                 if(i < data.demands.length) {
-                     let sum = 0;
-                     for(let k=1; k<=n; k++) sum += data.demands[i-k];
-                     forecasts[i] = sum/n;
-                 }
+            for(let i = n; i < data.demands.length; i++) {
+                 // F_t (Forecast for period t, index i) uses demands i-n to i-1
+                 let sum = 0;
+                 for(let k=1; k<=n; k++) sum += data.demands[i-k];
+                 forecasts[i] = sum/n;
             }
+            // Next Period
             let nextSum = 0;
-            for(let k=1; k<=n; k++) nextSum += data.demands[data.demands.length-k];
+            for(let k=1; k<=n; k++) {
+                if(data.demands.length-k >= 0) nextSum += data.demands[data.demands.length-k];
+            }
             let nextForecast = nextSum/n;
 
             let html = `<div class="iteration-box" style="border-left: 5px solid #007bff;">
@@ -1077,24 +1184,31 @@
                 <div style="margin-bottom:10px;">
                     Formula: MA<sub>n</sub> = (&#8721; D<sub>i</sub>) / n <br>
                     Parameter: n = <select id="fc_param_ma_n" onchange="solveForecasting()">`;
-            for(let i=1; i<data.demands.length; i++) html += `<option value="${i}" ${i===n?'selected':''}>${i}</option>`;
+            // Allow N up to Total Periods
+            for(let i=1; i<=data.demands.length; i++) html += `<option value="${i}" ${i===n?'selected':''}>${i}</option>`;
             html += `</select>
                 </div>`;
             
+            // Example Calculation
             if(n < data.demands.length) {
                  let exSum = 0; 
                  let exStr = "";
-                 for(let k=1; k<=n; k++) { exSum += data.demands[n-k]; exStr += `${data.demands[n-k]} + `; }
-                 html += `<p style="color:#666; font-size:0.9em;">Example (Period ${n+1}): (${exStr.slice(0,-3)}) / ${n} = ${fmt(exSum/n)}</p>`;
+                 for(let k=1; k<=n; k++) { 
+                     let val = data.demands[n-k];
+                     exSum += val; 
+                     exStr += `${val} + `; 
+                 }
+                 html += `<p style="color:#666; font-size:0.9em;">Example (Forecast for Period ${n+1}): (${exStr.slice(0,-3)}) / ${n} = ${fmtFC(exSum/n)}</p>`;
             }
 
             html += `<table><thead><tr><th>${xName}</th><th>${yName}</th><th>Forecast (MA)</th></tr></thead><tbody>`;
             for(let i=0; i<data.demands.length; i++) {
-                html += `<tr><td>${data.periods[i]}</td><td>${data.demands[i]}</td><td>${fmt(forecasts[i])}</td></tr>`;
+                html += `<tr><td>${data.timeLabels[i]}</td><td>${data.demands[i]}</td><td>${fmtFC(forecasts[i])}</td></tr>`;
             }
-            html += `<tr style="background:#e6f7ff;"><td>Next</td><td>-</td><td><strong>${fmt(nextForecast)}</strong></td></tr>`;
+            html += `<tr style="background:#e6f7ff;"><td>Next</td><td>-</td><td><strong>${fmtFC(nextForecast)}</strong></td></tr>`;
             html += `</tbody></table>`;
-            html += buildAccTable(data.demands, forecasts, accs);
+            
+            html += buildDetailedAccTable(data.demands, forecasts, accs, "Moving Average");
             html += `</div>`;
             container.innerHTML += html;
         }
@@ -1104,45 +1218,60 @@
             let n = config.wma_n;
             let weights = config.wma_weights;
 
+            // Initialize weights if empty or mismatched size
             if(weights.length !== n) {
-                 // Default logic if weights not match
                  weights = [];
                  let rem = 1.0;
                  for(let k=0; k<n-1; k++) { weights.push(Number((rem/2).toFixed(2))); rem -= weights[k]; }
                  weights.push(Number(rem.toFixed(2)));
             }
 
+            // Sum Check
+            let wSum = weights.reduce((a,b)=>a+b, 0);
+            let wMsg = Math.abs(wSum-1.0)>0.01 ? `<div style="color:red; font-weight:bold;">Warning: Weights sum to ${wSum.toFixed(2)}. They should sum to 1.0</div>` : "";
+
             let forecasts = Array(data.demands.length).fill(null);
             for(let i=n; i<data.demands.length; i++) {
                 let f = 0;
                 for(let k=0; k<n; k++) {
+                    // weights[0] is most recent. data[i-1] is most recent relative to i.
                     f += weights[k] * data.demands[i-1-k];
                 }
                 forecasts[i] = f;
             }
             let nextF = 0;
-            for(let k=0; k<n; k++) nextF += weights[k] * data.demands[data.demands.length-1-k];
+            for(let k=0; k<n; k++) {
+                if(data.demands.length-1-k >= 0) nextF += weights[k] * data.demands[data.demands.length-1-k];
+            }
 
             let html = `<div class="iteration-box" style="border-left: 5px solid #6f42c1;">
                 <h4>Weighted Moving Average (WMA)</h4>
+                ${wMsg}
                 <div style="margin-bottom:10px;">
-                    Formula: WMA = &#8721; W<sub>i</sub> D<sub>i</sub> <br>
+                    Formula: WMA = &#8721; (Weight<sub>i</sub> &times; Demand<sub>t-i</sub>) <br>
                     Parameter n: <select id="fc_param_wma_n" onchange="solveForecasting()" style="margin-right:10px;">`;
-            for(let i=1; i<data.demands.length; i++) html += `<option value="${i}" ${i===n?'selected':''}>${i}</option>`;
-            html += `</select> <br>Weights (Most recent first): `;
+            for(let i=1; i<=data.demands.length; i++) html += `<option value="${i}" ${i===n?'selected':''}>${i}</option>`;
+            html += `</select> <br><strong>Weights</strong> (Most recent period first):<br>`;
             
             for(let k=0; k<n; k++) {
-                html += `W${k+1}: <input type="number" id="fc_wma_w_${k}" value="${weights[k]}" step="0.01" style="width:50px;" onchange="solveForecasting()"> `;
+                html += `W<sub>t-${k+1}</sub>: <input type="number" id="fc_wma_w_${k}" value="${weights[k]}" step="0.01" style="width:60px;" onchange="solveForecasting()"> `;
             }
             html += `</div>`;
 
-            html += `<table><thead><tr><th>${xName}</th><th>${yName}</th><th>Forecast (WMA)</th></tr></thead><tbody>`;
+            // Table with Weight Explanation
+            html += `<table><thead><tr><th>${xName}</th><th>${yName}</th><th>Forecast</th><th>Weights Used</th></tr></thead><tbody>`;
             for(let i=0; i<data.demands.length; i++) {
-                html += `<tr><td>${data.periods[i]}</td><td>${data.demands[i]}</td><td>${fmt(forecasts[i])}</td></tr>`;
+                let wStr = "-";
+                if (forecasts[i] !== null) {
+                    wStr = `<span style="font-size:0.8em; color:#666;">`;
+                    for(let k=0; k<n; k++) wStr += `(${weights[k]}&times;${data.demands[i-1-k]}) + `;
+                    wStr = wStr.slice(0, -3) + "</span>";
+                }
+                html += `<tr><td>${data.timeLabels[i]}</td><td>${data.demands[i]}</td><td>${fmtFC(forecasts[i])}</td><td>${wStr}</td></tr>`;
             }
-            html += `<tr style="background:#f3e5f5;"><td>Next</td><td>-</td><td><strong>${fmt(nextF)}</strong></td></tr>`;
+            html += `<tr style="background:#f3e5f5;"><td>Next</td><td>-</td><td><strong>${fmtFC(nextF)}</strong></td><td>-</td></tr>`;
             html += `</tbody></table>`;
-            html += buildAccTable(data.demands, forecasts, accs);
+            html += buildDetailedAccTable(data.demands, forecasts, accs, "Weighted MA");
             html += `</div>`;
             container.innerHTML += html;
         }
@@ -1152,6 +1281,7 @@
             let alpha = config.ses_alpha;
 
             let forecasts = [];
+            // F1 = D1 (Lecture assumption)
             forecasts.push(data.demands[0]); 
             
             for(let i=1; i<data.demands.length; i++) {
@@ -1162,7 +1292,7 @@
 
             let exHtml = "";
             if(data.demands.length > 1) {
-                exHtml = `<p style="color:#666; font-size:0.9em;">Period 2: ${alpha}(${data.demands[0]}) + (1-${alpha})(${data.demands[0]}) = ${fmt(forecasts[1])}</p>`;
+                exHtml = `<p style="color:#666; font-size:0.9em;">Example (Period 2): ${alpha}(${data.demands[0]}) + (1-${alpha})(${data.demands[0]}) = ${fmtFC(forecasts[1])}</p>`;
             }
 
             let html = `<div class="iteration-box" style="border-left: 5px solid #fd7e14;">
@@ -1173,11 +1303,11 @@
                 <table><thead><tr><th>${xName}</th><th>${yName}</th><th>Forecast (F<sub>t</sub>)</th></tr></thead><tbody>`;
             
             for(let i=0; i<data.demands.length; i++) {
-                 html += `<tr><td>${data.periods[i]}</td><td>${data.demands[i]}</td><td>${fmt(forecasts[i])}</td></tr>`;
+                 html += `<tr><td>${data.timeLabels[i]}</td><td>${data.demands[i]}</td><td>${fmtFC(forecasts[i])}</td></tr>`;
             }
-            html += `<tr style="background:#fff3e0;"><td>Next</td><td>-</td><td><strong>${fmt(nextF)}</strong></td></tr>`;
+            html += `<tr style="background:#fff3e0;"><td>Next</td><td>-</td><td><strong>${fmtFC(nextF)}</strong></td></tr>`;
             html += `</tbody></table>`;
-            html += buildAccTable(data.demands, forecasts, accs);
+            html += buildDetailedAccTable(data.demands, forecasts, accs, "Simple Exp Smoothing");
             html += `</div>`;
             container.innerHTML += html;
         }
@@ -1215,20 +1345,21 @@
                 <table><thead><tr><th>${xName}</th><th>${yName}</th><th>Forecast (F)</th><th>Trend (T)</th><th>Adj Forecast (AF)</th></tr></thead><tbody>`;
             
             for(let i=0; i<data.demands.length; i++) {
-                 html += `<tr><td>${data.periods[i]}</td><td>${data.demands[i]}</td>
-                 <td>${fmt(F[i])}</td><td>${fmt(T[i])}</td><td><strong>${fmt(AF[i])}</strong></td></tr>`;
+                 html += `<tr><td>${data.timeLabels[i]}</td><td>${data.demands[i]}</td>
+                 <td>${fmtFC(F[i])}</td><td>${fmtFC(T[i])}</td><td><strong>${fmtFC(AF[i])}</strong></td></tr>`;
             }
-            html += `<tr style="background:#e8f5e9;"><td>Next</td><td>-</td><td>${fmt(nextF_simple)}</td><td>${fmt(nextT)}</td><td><strong>${fmt(nextAF)}</strong></td></tr>`;
+            html += `<tr style="background:#e8f5e9;"><td>Next</td><td>-</td><td>${fmtFC(nextF_simple)}</td><td>${fmtFC(nextT)}</td><td><strong>${fmtFC(nextAF)}</strong></td></tr>`;
             html += `</tbody></table>`;
-            html += buildAccTable(data.demands, AF, accs);
+            html += buildDetailedAccTable(data.demands, AF, accs, "Adjusted Exp Smoothing");
             html += `</div>`;
             container.innerHTML += html;
         }
 
-        // --- 5. Linear Trend Line (Helper & Render) ---
+        // --- 5. Linear Trend Line (Detailed) ---
         function solveLTLLogic(demands) {
             let n = demands.length;
             let sumX=0, sumY=0, sumXY=0, sumX2=0;
+            // X is always 1, 2, 3... for LTL calculation regardless of label
             for(let i=0; i<n; i++) {
                 let x = i+1;
                 let y = demands[i];
@@ -1241,7 +1372,7 @@
             let yBar = sumY/n;
             let b = (sumXY - n*xBar*yBar) / (sumX2 - n*xBar*xBar);
             let a = yBar - b*xBar;
-            return { a, b, n, xBar, yBar, sumXY, sumX2 };
+            return { a, b, n, xBar, yBar, sumXY, sumX2, sumX, sumY };
         }
 
         function renderLTL(container, data, accs, xName, yName, res) {
@@ -1253,18 +1384,54 @@
 
             let html = `<div class="iteration-box" style="border-left: 5px solid #e83e8c;">
                 <h4>Linear Trend Line (Least Squares)</h4>
-                Equation: y = ${fmt(res.a)} + ${fmt(res.b)}x <br>
-                <div style="font-size:0.9em; background:#f8f9fa; padding:5px; margin:5px 0;">
-                    Steps: x-bar=${fmt(res.xBar)}, y-bar=${fmt(res.yBar)}, b=(${fmt(res.sumXY)} - ${res.n}(${fmt(res.xBar)})(${fmt(res.yBar)})) / (${fmt(res.sumX2)} - ${res.n}(${fmt(res.xBar)})^2) = ${fmt(res.b)}
-                </div>
-                <table><thead><tr><th>${xName} (x)</th><th>${yName} (y)</th><th>Forecast (y=a+bx)</th></tr></thead><tbody>`;
+                
+                <div style="background:#fff; padding:10px; border:1px solid #ddd; margin-bottom:15px; font-family:'Courier New', monospace;">
+                    <h5 style="margin-top:0;">Calculation Table:</h5>
+                    <table style="font-size:0.9em;">
+                        <thead><tr style="background:#f0f0f0;"><th>Period (x)</th><th>Demand (y)</th><th>xy</th><th>x^2</th></tr></thead>
+                        <tbody>`;
+            
+            // Detailed Rows
+            for(let i=0; i<res.n; i++) {
+                 let x = i+1;
+                 let y = data.demands[i];
+                 html += `<tr><td>${x}</td><td>${y}</td><td>${x*y}</td><td>${x*x}</td></tr>`;
+            }
+            // Sums Row
+            html += `<tr style="font-weight:bold; border-top:2px solid #333;">
+                <td>&sum;x = ${res.sumX}</td>
+                <td>&sum;y = ${res.sumY}</td>
+                <td>&sum;xy = ${res.sumXY}</td>
+                <td>&sum;x^2 = ${res.sumX2}</td>
+            </tr>`;
+            html += `</tbody></table>
+            
+            <h5>Calculations:</h5>
+            <p>1. Averages:<br>
+               x̄ = ${res.sumX} / ${res.n} = <strong>${fmtFC(res.xBar)}</strong><br>
+               ȳ = ${res.sumY} / ${res.n} = <strong>${fmtFC(res.yBar)}</strong>
+            </p>
+            <p>2. Slope (b):<br>
+               b = (&sum;xy - n x̄ ȳ) / (&sum;x^2 - n (x̄)^2)<br>
+               b = (${res.sumXY} - ${res.n}(${fmtFC(res.xBar)})(${fmtFC(res.yBar)})) / (${res.sumX2} - ${res.n}(${fmtFC(res.xBar)})^2)<br>
+               b = <strong>${fmtFC(res.b)}</strong>
+            </p>
+            <p>3. Intercept (a):<br>
+               a = ȳ - b x̄<br>
+               a = ${fmtFC(res.yBar)} - (${fmtFC(res.b)})(${fmtFC(res.xBar)})<br>
+               a = <strong>${fmtFC(res.a)}</strong>
+            </p>
+            <p style="color:blue; font-weight:bold;">Equation: y = ${fmtFC(res.a)} + ${fmtFC(res.b)}x</p>
+            </div>
+
+            <table><thead><tr><th>${xName} (x)</th><th>${yName} (y)</th><th>Forecast (y=a+bx)</th></tr></thead><tbody>`;
             
             for(let i=0; i<data.demands.length; i++) {
-                 html += `<tr><td>${i+1}</td><td>${data.demands[i]}</td><td>${fmt(forecasts[i])}</td></tr>`;
+                 html += `<tr><td>${data.timeLabels[i]}</td><td>${data.demands[i]}</td><td>${fmtFC(forecasts[i])}</td></tr>`;
             }
-            html += `<tr style="background:#fce4ec;"><td>${res.n+1}</td><td>-</td><td><strong>${fmt(nextF)}</strong></td></tr>`;
+            html += `<tr style="background:#fce4ec;"><td>Next (x=${res.n+1})</td><td>-</td><td><strong>${fmtFC(nextF)}</strong></td></tr>`;
             html += `</tbody></table>`;
-            html += buildAccTable(data.demands, forecasts, accs);
+            html += buildDetailedAccTable(data.demands, forecasts, accs, "Linear Trend Line");
             html += `</div>`;
             container.innerHTML += html;
         }
@@ -1295,20 +1462,20 @@
 
             let html = `<div class="iteration-box" style="border-left: 5px solid #17a2b8;">
                 <h4>Seasonal Adjustments</h4>
-                <p><strong>Step 1: Seasonal Indices (Proportion of Total)</strong><br>`;
+                <p><strong>Step 1: Seasonal Indices</strong> (Avg of Season / Grand Avg)<br>`;
             
             indices.forEach((idx, i) => {
-                html += `S${i+1}: ${fmt(idx)} &nbsp; `;
+                html += `S${i+1}: ${fmtFC(idx)} &nbsp; `;
             });
-            html += `</p><p><strong>Step 2: Trend Forecast for Next Year (Period ${nextYearX})</strong><br>
-            Using LTL (y=${fmt(ltlRes.a)} + ${fmt(ltlRes.b)}x): Total = ${fmt(nextYearTotal)}</p>
+            html += `</p><p><strong>Step 2: Trend Forecast for Next Year</strong> (Period ${nextYearX})<br>
+            Using LTL (y=${fmtFC(ltlRes.a)} + ${fmtFC(ltlRes.b)}x): Total = ${fmtFC(nextYearTotal)}</p>
             
             <p><strong>Step 3: Adjusted Quarterly Forecasts</strong><br>
             SF<sub>i</sub> = Total &times; S<sub>i</sub></p>
             <table style="width:auto;"><thead><tr><th>Season</th><th>Calculation</th><th>Forecast</th></tr></thead><tbody>`;
             
             seasonalForecasts.forEach((sf, i) => {
-                html += `<tr><td>Season ${i+1}</td><td>${fmt(nextYearTotal)} * ${fmt(indices[i])}</td><td><strong>${fmt(sf)}</strong></td></tr>`;
+                html += `<tr><td>Season ${i+1}</td><td>${fmtFC(nextYearTotal)} * ${fmtFC(indices[i])}</td><td><strong>${fmtFC(sf)}</strong></td></tr>`;
             });
             html += `</tbody></table></div>`;
             container.innerHTML += html;
