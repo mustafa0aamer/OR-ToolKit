@@ -984,7 +984,8 @@
                 let v = parseFloat(document.getElementById(`fc_d_${rowIdx}_${j}`).value) || 0;
                 sum += v;
             }
-            document.getElementById(`fc_total_${rowIdx}`).innerText = sum;
+            // Fix: Round to 2 decimal places to prevent floating point errors
+            document.getElementById(`fc_total_${rowIdx}`).innerText = parseFloat(sum.toFixed(2));
         }
 
         // --- Data Extraction ---
@@ -1084,79 +1085,141 @@
         // RENDERERS
         // ==========================================
 
-        function buildDetailedAccTable(actuals, forecasts, accs, methodTitle) {
+function buildDetailedAccTable(actuals, forecasts, accs, methodTitle) {
             if(accs.length === 0) return "";
             
-            let html = `<div style="margin-top:10px; border: 1px solid #ffeeba; border-radius: 5px; overflow: hidden;">
-                <div style="background:#fff3cd; padding:8px; font-weight:bold; border-bottom:1px solid #ffeeba;">Accuracy Details (${methodTitle})</div>
-                <table style="font-size:13px; margin:0;"><thead><tr>
-                    <th>Period</th><th>Actual (D)</th><th>Forecast (F)</th>`;
+            // --- 1. Calculate Sums & Counts based on Lecture Logic ---
+            let sumDemand = 0;  // Sum of D (only for valid error periods)
+            let sumErr = 0;     // Sum of (D-F)
+            let sumAbsErr = 0;  // Sum of |D-F|
+            let n = 0;          // Count of valid periods (where error != 0)
+
+            // We need to store row data to generate the HTML
+            let rowData = [];
+
+            for(let i=0; i<actuals.length; i++) {
+                let D = actuals[i];
+                let F = forecasts[i];
+                let rowObj = { i: i+1, D: D, F: F, isVal: false, e: 0, absE: 0 };
+
+                if(F !== null) {
+                    let e = D - F;
+                    // Lecture Logic: We only evaluate accuracy where there is an actual error (deviation).
+                    // This excludes the initialization period (e.g., F1=D1 => Error=0).
+                    // We check if absolute error is significantly > 0 (dealing with float precision)
+                    if(Math.abs(e) > 0.0000001) {
+                        n++;
+                        sumDemand += D;
+                        sumErr += e;
+                        sumAbsErr += Math.abs(e);
+                        
+                        rowObj.isVal = true;
+                        rowObj.e = e;
+                        rowObj.absE = Math.abs(e);
+                    }
+                }
+                rowData.push(rowObj);
+            }
+
+            // --- 2. Build HTML Table ---
+            let colSpan = 3; // Period, Actual, Forecast
+            let html = `<div style="margin-top:15px; border: 2px solid #333; border-radius: 4px; overflow: hidden; font-family: 'Segoe UI', sans-serif;">
+                <div style="background:#e0e0e0; padding:10px; font-weight:bold; border-bottom:1px solid #999; text-align:center;">
+                    Accuracy Analysis: ${methodTitle}
+                </div>
+                <table style="font-size:14px; margin:0; width:100%; border-collapse: collapse;">
+                <thead>
+                    <tr style="background:#f0f0f0; border-bottom: 2px solid #ccc;">
+                        <th style="padding:8px; border-right:1px solid #ddd;">Period</th>
+                        <th style="padding:8px; border-right:1px solid #ddd;">Actual (D)</th>
+                        <th style="padding:8px; border-right:1px solid #ddd;">Forecast (F)</th>`;
             
-            if(accs.includes("E") || accs.includes("EBAR")) html += `<th>Error (e = D-F)</th>`;
-            if(accs.includes("MAD")) html += `<th>|e|</th>`;
-            if(accs.includes("MAPD")) html += `<th>|e|/D</th>`;
-            if(accs.includes("E")) html += `<th>Cumul E</th>`;
+            // Add Headers based on selection
+            if(accs.includes("E") || accs.includes("EBAR")) { html += `<th style="padding:8px; border-right:1px solid #ddd;">Error (e)</th>`; colSpan++; }
+            if(accs.includes("MAD")) { html += `<th style="padding:8px; border-right:1px solid #ddd;">|e|</th>`; colSpan++; }
+            // Note: For MAPD logic in lecture (Slide 51), we usually don't show a per-row % column, 
+            // but we can show it or just use the totals. Let's keep it clean or show |e|/D if needed?
+            // User request implies summary is key. Let's stick to standard columns.
             
             html += `</tr></thead><tbody>`;
 
-            let sumE=0, sumAbsE=0, sumPctE=0, count=0;
-            
-            for(let i=0; i<actuals.length; i++) {
-                if(forecasts[i] !== null) {
-                    let D = actuals[i];
-                    let F = forecasts[i];
-                    let e = D - F;
-                    let absE = Math.abs(e);
-                    let pctE = D !== 0 ? absE / D : 0;
-                    
-                    sumE += e;
-                    sumAbsE += absE;
-                    sumPctE += pctE;
-                    count++;
+            // Data Rows
+            rowData.forEach(row => {
+                let bg = row.isVal ? "#fff" : "#f9f9f9"; // Grey out excluded rows
+                html += `<tr style="background:${bg}; border-bottom:1px solid #eee;">
+                    <td style="padding:6px; text-align:center; border-right:1px solid #eee;">${row.i}</td>
+                    <td style="padding:6px; text-align:center; border-right:1px solid #eee;">${fmtFC(row.D)}</td>
+                    <td style="padding:6px; text-align:center; border-right:1px solid #eee;">${row.F !== null ? fmtFC(row.F) : "-"}</td>`;
 
-                    html += `<tr>
-                        <td>${i+1}</td>
-                        <td>${fmtFC(D)}</td>
-                        <td>${fmtFC(F)}</td>`;
-                    
-                    if(accs.includes("E") || accs.includes("EBAR")) html += `<td style="color:${e<0?'red':'green'}">${fmtFC(e)}</td>`;
-                    if(accs.includes("MAD")) html += `<td>${fmtFC(absE)}</td>`;
-                    if(accs.includes("MAPD")) html += `<td>${fmtFC(pctE)}</td>`;
-                    if(accs.includes("E")) html += `<td>${fmtFC(sumE)}</td>`;
-                    
-                    html += `</tr>`;
+                if(row.isVal) {
+                    if(accs.includes("E") || accs.includes("EBAR")) 
+                        html += `<td style="padding:6px; text-align:center; color:${row.e<0?'red':'green'}; border-right:1px solid #eee;">${fmtFC(row.e)}</td>`;
+                    if(accs.includes("MAD")) 
+                        html += `<td style="padding:6px; text-align:center; border-right:1px solid #eee;">${fmtFC(row.absE)}</td>`;
                 } else {
-                    // Empty row for periods with no forecast
-                    html += `<tr><td>${i+1}</td><td>${fmtFC(actuals[i])}</td><td>-</td><td colspan="${accs.length + 1}" style="background:#f9f9f9;"></td></tr>`;
+                    // Empty cells for excluded/null rows
+                    if(accs.includes("E") || accs.includes("EBAR")) html += `<td style="border-right:1px solid #eee;">-</td>`;
+                    if(accs.includes("MAD")) html += `<td style="border-right:1px solid #eee;">-</td>`;
                 }
-            }
-            
-            // Summary Row
-            let mad = count ? sumAbsE/count : 0;
-            let mapd = count ? (sumPctE/count)*100 : 0;
-            let bias = count ? sumE/count : 0;
+                html += `</tr>`;
+            });
 
-            html += `<tr style="font-weight:bold; background:#fffbf2; border-top:2px solid #e0e0e0;">
-                <td colspan="3" style="text-align:right;">Results:</td>`;
+            // --- 3. Summary Rows (The Request) ---
             
-            let details = [];
+            // Row A: Sums
+            html += `<tr style="background:#fff3e0; font-weight:bold; border-top:2px solid #aaa;">
+                <td colspan="1" style="text-align:right; padding:8px;">Total (n=${n}):</td>
+                <td style="text-align:center; padding:8px; border-right:1px solid #ccc; color:#000;">${fmtFC(sumDemand)}</td>
+                <td style="border-right:1px solid #ccc;"></td>`;
+            
+            if(accs.includes("E") || accs.includes("EBAR")) html += `<td style="text-align:center; padding:8px; border-right:1px solid #ccc;">${fmtFC(sumErr)}</td>`;
+            if(accs.includes("MAD")) html += `<td style="text-align:center; padding:8px; border-right:1px solid #ccc;">${fmtFC(sumAbsErr)}</td>`;
+            html += `</tr>`;
+
+            // Row B: Substitution / Formulas
+            html += `<tr style="background:#e8f5e9; border-top:1px solid #ccc;">
+                <td colspan="3" style="text-align:right; padding:8px; font-style:italic;">Formula Subst.:</td>`;
+
             if(accs.includes("E") || accs.includes("EBAR")) {
-                html += `<td>Avg (Bias) = ${fmtFC(bias)}</td>`;
-                details.push(`Bias: ${fmtFC(bias)}`);
+                let txt = "";
+                if(accs.includes("EBAR")) txt = `${fmtFC(sumErr)} / ${n}`;
+                html += `<td style="text-align:center; padding:8px; border-right:1px solid #ccc; font-family:monospace;">${txt}</td>`;
             }
             if(accs.includes("MAD")) {
-                html += `<td>MAD = ${fmtFC(mad)}</td>`;
-                details.push(`MAD: ${fmtFC(mad)}`);
+                html += `<td style="text-align:center; padding:8px; border-right:1px solid #ccc; font-family:monospace;">${fmtFC(sumAbsErr)} / ${n}</td>`;
             }
+            html += `</tr>`;
+
+            // Row C: Final Results
+            html += `<tr style="background:#28a745; color:white; font-weight:bold; border-top:1px solid #ccc;">
+                <td colspan="3" style="text-align:right; padding:8px;">Final Results:</td>`;
+
+            if(accs.includes("E") || accs.includes("EBAR")) {
+                let res = "";
+                if(accs.includes("E")) res += `E=${fmtFC(sumErr)}`;
+                if(accs.includes("E") && accs.includes("EBAR")) res += `<br>`;
+                if(accs.includes("EBAR")) res += `Bias=${fmtFC(sumErr/n)}`;
+                html += `<td style="text-align:center; padding:8px; border-right:1px solid #ccc;">${res}</td>`;
+            }
+            if(accs.includes("MAD")) {
+                html += `<td style="text-align:center; padding:8px; border-right:1px solid #ccc;">MAD = ${fmtFC(sumAbsErr/n)}</td>`;
+            }
+            html += `</tr>`;
+
+            // Special Row for MAPD (Since it uses Demand Sum, not usually a column in the table)
             if(accs.includes("MAPD")) {
-                html += `<td>MAPD = ${fmtFC(mapd)}%</td>`;
-                details.push(`MAPD: ${fmtFC(mapd)}%`);
+                let mapdVal = (sumAbsErr / sumDemand) * 100; // Slide 51 Formula
+                html += `<tr style="background:#e3f2fd; border-top:2px solid #aaa;">
+                    <td colspan="${colSpan}" style="padding:10px; text-align:center;">
+                        <strong>MAPD (MAPE) Calculation:</strong><br>
+                        Formula: &sum;|e| / &sum;D <br>
+                        Substitution: ${fmtFC(sumAbsErr)} / ${fmtFC(sumDemand)} <br>
+                        Result: <strong>${fmtFC(mapdVal)}%</strong>
+                    </td>
+                </tr>`;
             }
-            if(accs.includes("E")) {
-                 html += `<td>Sum = ${fmtFC(sumE)}</td>`;
-                 details.push(`Total Error: ${fmtFC(sumE)}`);
-            }
-            html += `</tr></tbody></table></div>`;
+
+            html += `</tbody></table></div>`;
             return html;
         }
 
