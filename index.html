@@ -141,15 +141,83 @@
     <!-- ========================================== -->
     <!-- TOOL 2: OR Forecasting (Placeholder)      -->
     <!-- ========================================== -->
-    <div id="or-forecasting" class="tool-content">
-        <h2 style="border-bottom: 2px solid #28a745; padding-bottom: 10px;">[OR] Forecasting Calculator</h2>
+   <div id="or-forecasting" class="tool-content">
+        <h2 style="border-bottom: 2px solid #28a745; padding-bottom: 10px; color: #28a745;">[OR] Forecasting Calculator</h2>
+        
         <div class="config-section">
-            <p style="text-align: center; font-style: italic; color: #666;">
-                This tool is currently under construction.
-                <br>Add your logic here.
-            </p>
+            <h3>1. Configuration</h3>
+            <div class="input-row">
+                <label>Number of Periods (Rows): <input type="number" id="fc_numPeriods" value="5" min="2"></label>
+            </div>
+            
+            <div class="input-row" style="margin-top: 10px; border-top: 1px dashed #ccc; padding-top: 10px;">
+                <label style="margin-right: 15px;">
+                    <input type="checkbox" id="fc_isSeasonal" onchange="toggleSeasonalInput()"> 
+                    <strong>Seasonal Data?</strong>
+                </label>
+                <span id="fc_season_config" style="display:none;">
+                    Number of Seasons (Parts): <input type="number" id="fc_seasonParts" value="4" min="2" style="width: 50px;">
+                </span>
+            </div>
+
+            <div class="input-row" style="margin-top: 10px;">
+                <span style="margin-right: 10px; font-weight: bold;">Time Unit:</span>
+                <label style="margin-right: 10px;"><input type="radio" name="fc_timeUnit" value="generic" checked onclick="toggleDateInput()"> Generic (1, 2...)</label>
+                <label style="margin-right: 10px;"><input type="radio" name="fc_timeUnit" value="years" onclick="toggleDateInput()"> Years</label>
+                <label><input type="radio" name="fc_timeUnit" value="months" onclick="toggleDateInput()"> Months</label>
+                
+                <span id="fc_start_val_container" style="display:none; margin-left: 10px;">
+                    Start: <input type="text" id="fc_startVal" placeholder="e.g. 1999 or Jan">
+                </span>
+            </div>
+
+            <button onclick="generateForecastingTable()" style="background-color: #28a745;">Generate Table</button>
         </div>
-        <div id="forecasting-output-area"></div>
+
+        <div id="fc-data-section" class="input-section" style="display:none;">
+            <h3>2. Data Entry</h3>
+            
+            <div style="margin-bottom: 15px; text-align: center;">
+                <label>Column Name (X): <input type="text" id="fc_header_x" value="Period" style="width: 100px;"></label>
+                <label>Column Name (Y): <input type="text" id="fc_header_y" value="Demand" style="width: 100px;"></label>
+            </div>
+
+            <div id="fc-table-container" style="overflow-x: auto; margin-bottom: 20px;"></div>
+
+            <!-- Methods Selection -->
+            <div style="background: #f8f9fa; padding: 15px; border-radius: 5px; border: 1px solid #ddd; margin-bottom: 15px;">
+                <h4 style="margin-top: 0;">3. Choose Methods</h4>
+                <label style="display:block; margin-bottom:5px; border-bottom:1px solid #eee;">
+                    <input type="checkbox" onchange="toggleAllFC(this, 'fc_method')"> Select All Methods
+                </label>
+                <div style="display: flex; flex-wrap: wrap; gap: 15px;">
+                    <label><input type="checkbox" class="fc_method" value="MA"> Moving Average (MA)</label>
+                    <label><input type="checkbox" class="fc_method" value="WMA"> Weighted MA</label>
+                    <label><input type="checkbox" class="fc_method" value="SES"> Simple Exp. Smoothing</label>
+                    <label><input type="checkbox" class="fc_method" value="AES"> Adjusted Exp. Smoothing</label>
+                    <label><input type="checkbox" class="fc_method" value="LTL"> Linear Trend Line</label>
+                    <label><input type="checkbox" class="fc_method" value="SA" id="fc_method_sa" disabled> Seasonal Adjustments</label>
+                </div>
+            </div>
+
+            <!-- Accuracy Selection -->
+            <div style="background: #fff3cd; padding: 15px; border-radius: 5px; border: 1px solid #ffeeba;">
+                <h4 style="margin-top: 0;">4. Accuracy Measures</h4>
+                <label style="display:block; margin-bottom:5px; border-bottom:1px solid #faeacc;">
+                    <input type="checkbox" onchange="toggleAllFC(this, 'fc_acc')"> Select All Measures
+                </label>
+                <div style="display: flex; flex-wrap: wrap; gap: 15px;">
+                    <label><input type="checkbox" class="fc_acc" value="MAD"> MAD</label>
+                    <label><input type="checkbox" class="fc_acc" value="MAPD"> MAPD (MAPE)</label>
+                    <label><input type="checkbox" class="fc_acc" value="E"> Cumulative Error (E)</label>
+                    <label><input type="checkbox" class="fc_acc" value="EBAR"> Average Error (Bias)</label>
+                </div>
+            </div>
+
+            <button onclick="solveForecasting()" style="background-color: #28a745; width: 100%; font-size: 18px;">Calculate Forecasts</button>
+        </div>
+
+        <div id="fc-output-area"></div>
     </div>
 
     <!-- ========================================== -->
@@ -764,6 +832,584 @@ function solveOR() {
 
                 iter++;
             }
+        }
+        // ==========================================
+        // FORECASTING TOOL LOGIC
+        // ==========================================
+
+        let fc_is_seasonal = false;
+        let fc_data_rows = 0;
+        let fc_season_count = 1;
+        
+        function toggleSeasonalInput() {
+            const chk = document.getElementById('fc_isSeasonal');
+            document.getElementById('fc_season_config').style.display = chk.checked ? 'inline' : 'none';
+            // Enable/Disable Seasonal Method checkbox
+            const saMethod = document.getElementById('fc_method_sa');
+            if(chk.checked) {
+                saMethod.disabled = false;
+                saMethod.checked = true;
+                saMethod.parentNode.style.color = 'black';
+            } else {
+                saMethod.disabled = true;
+                saMethod.checked = false;
+                saMethod.parentNode.style.color = '#ccc';
+            }
+        }
+
+        function toggleDateInput() {
+            const units = document.getElementsByName('fc_timeUnit');
+            let val = 'generic';
+            for(let u of units) if(u.checked) val = u.value;
+            document.getElementById('fc_start_val_container').style.display = (val !== 'generic') ? 'inline' : 'none';
+        }
+
+        function toggleAllFC(source, className) {
+            const checkboxes = document.querySelectorAll('.' + className);
+            for(let i=0; i<checkboxes.length; i++) {
+                if(!checkboxes[i].disabled) checkboxes[i].checked = source.checked;
+            }
+        }
+
+        function generateForecastingTable() {
+            fc_data_rows = parseInt(document.getElementById('fc_numPeriods').value);
+            fc_is_seasonal = document.getElementById('fc_isSeasonal').checked;
+            fc_season_count = fc_is_seasonal ? parseInt(document.getElementById('fc_seasonParts').value) : 1;
+
+            // Generate Labels
+            let labels = [];
+            const unit = document.querySelector('input[name="fc_timeUnit"]:checked').value;
+            let startVal = document.getElementById('fc_startVal').value;
+
+            if (unit === 'generic') {
+                for(let i=1; i<=fc_data_rows; i++) labels.push(i);
+            } else if (unit === 'years') {
+                let s = parseInt(startVal) || 2000;
+                for(let i=0; i<fc_data_rows; i++) labels.push(s + i);
+            } else {
+                // Simple months logic (repeating)
+                const months = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+                let sIdx = months.indexOf(startVal.substring(0,3));
+                if(sIdx === -1) sIdx = 0;
+                for(let i=0; i<fc_data_rows; i++) {
+                    labels.push(months[(sIdx + i) % 12]);
+                }
+            }
+
+            let tableHTML = `<table id="fc_input_table"><thead><tr><th style="background:#e9ecef;">Period</th>`;
+            
+            if (fc_is_seasonal) {
+                for(let j=1; j<=fc_season_count; j++) {
+                    tableHTML += `<th>Season ${j}</th>`;
+                }
+                tableHTML += `<th style="background:#f0f0f0; color:#555;">Total (Calc)</th>`;
+            } else {
+                tableHTML += `<th>Data (Demand)</th>`;
+            }
+            tableHTML += `</tr></thead><tbody>`;
+
+            for(let i=0; i<fc_data_rows; i++) {
+                tableHTML += `<tr>`;
+                tableHTML += `<td><input type="text" value="${labels[i]}" readonly style="background:#f9f9f9; border:none; font-weight:bold;"></td>`;
+                
+                if (fc_is_seasonal) {
+                    for(let j=0; j<fc_season_count; j++) {
+                        tableHTML += `<td><input type="number" id="fc_d_${i}_${j}" class="fc-data-input" oninput="fcUpdateRowTotal(${i})" placeholder="0"></td>`;
+                    }
+                    tableHTML += `<td id="fc_total_${i}" style="font-weight:bold; color:#28a745;">0</td>`;
+                } else {
+                    tableHTML += `<td><input type="number" id="fc_d_${i}" class="fc-data-input" placeholder="0"></td>`;
+                }
+                tableHTML += `</tr>`;
+            }
+            tableHTML += `</tbody></table>`;
+
+            document.getElementById('fc-table-container').innerHTML = tableHTML;
+            document.getElementById('fc-data-section').style.display = 'block';
+            document.getElementById('fc-output-area').innerHTML = '';
+        }
+
+        function fcUpdateRowTotal(rowIdx) {
+            let sum = 0;
+            for(let j=0; j<fc_season_count; j++) {
+                let v = parseFloat(document.getElementById(`fc_d_${rowIdx}_${j}`).value) || 0;
+                sum += v;
+            }
+            document.getElementById(`fc_total_${rowIdx}`).innerText = sum;
+        }
+
+        // ==========================================
+        // SOLVERS
+        // ==========================================
+        
+        // Helper: Format decimal
+        const fmt = (n) => (n !== null && n !== undefined) ? parseFloat(n).toFixed(2) : "-";
+
+        function getFCData() {
+            let periods = [];
+            let demands = [];
+            let seasonalData = []; // Array of Arrays if seasonal
+
+            const table = document.getElementById('fc_input_table');
+            const rows = table.querySelectorAll('tbody tr');
+
+            rows.forEach((tr, idx) => {
+                const pLabel = tr.cells[0].querySelector('input').value;
+                periods.push(pLabel);
+
+                if(fc_is_seasonal) {
+                    let sRow = [];
+                    let total = 0;
+                    for(let j=0; j<fc_season_count; j++) {
+                        let val = parseFloat(document.getElementById(`fc_d_${idx}_${j}`).value) || 0;
+                        sRow.push(val);
+                        total += val;
+                    }
+                    seasonalData.push(sRow);
+                    demands.push(total); // For MA, LTL etc, use totals
+                } else {
+                    let val = parseFloat(document.getElementById(`fc_d_${idx}`).value) || 0;
+                    demands.push(val);
+                }
+            });
+
+            return { periods, demands, seasonalData };
+        }
+
+        function solveForecasting() {
+            trackSolve(); // Analytics
+            const out = document.getElementById('fc-output-area');
+            out.innerHTML = "";
+            
+            const dataObj = getFCData();
+            const methods = Array.from(document.querySelectorAll('.fc_method:checked')).map(c => c.value);
+            const accs = Array.from(document.querySelectorAll('.fc_acc:checked')).map(c => c.value);
+
+            const xName = document.getElementById('fc_header_x').value || "Period";
+            const yName = document.getElementById('fc_header_y').value || "Demand";
+
+            if (methods.length === 0) {
+                out.innerHTML = "<p style='color:red;'>Please select at least one method.</p>";
+                return;
+            }
+
+            // 1. Moving Average
+            if(methods.includes("MA")) renderMA(out, dataObj, accs, xName, yName);
+            
+            // 2. Weighted Moving Average
+            if(methods.includes("WMA")) renderWMA(out, dataObj, accs, xName, yName);
+
+            // 3. Simple Exp Smoothing
+            if(methods.includes("SES")) renderSES(out, dataObj, accs, xName, yName);
+
+            // 4. Adjusted Exp Smoothing
+            if(methods.includes("AES")) renderAES(out, dataObj, accs, xName, yName);
+
+            // 5. Linear Trend Line
+            let ltlResult = null;
+            if(methods.includes("LTL") || methods.includes("SA")) {
+                 ltlResult = solveLTLLogic(dataObj.demands);
+            }
+            if(methods.includes("LTL")) renderLTL(out, dataObj, accs, xName, yName, ltlResult);
+
+            // 6. Seasonal Adjustments
+            if(methods.includes("SA") && fc_is_seasonal) renderSA(out, dataObj, accs, xName, yName, ltlResult);
+        }
+
+        // --- SOLVER RENDERERS ---
+
+        function buildAccTable(actuals, forecasts, accs) {
+            if(accs.length === 0) return "";
+            
+            let madSum=0, mapdSum=0, eSum=0, count=0;
+            let n = 0;
+            
+            for(let i=0; i<actuals.length; i++) {
+                if(forecasts[i] !== null) {
+                    let err = actuals[i] - forecasts[i];
+                    let absErr = Math.abs(err);
+                    madSum += absErr;
+                    if(actuals[i] !== 0) mapdSum += (absErr / actuals[i]);
+                    eSum += err;
+                    n++;
+                }
+            }
+            
+            if(n===0) return "";
+
+            let mad = madSum / n;
+            let mapd = (mapdSum / n) * 100;
+            let eBar = eSum / n; // Bias
+
+            let html = `<div style="margin-top:10px; background:#fff3cd; padding:10px; border:1px solid #ffeeba;"><strong>Accuracy:</strong> `;
+            if(accs.includes("MAD")) html += `MAD = ${fmt(mad)} | `;
+            if(accs.includes("MAPD")) html += `MAPD = ${fmt(mapd)}% | `;
+            if(accs.includes("E")) html += `Cumulative Error (E) = ${fmt(eSum)} | `;
+            if(accs.includes("EBAR")) html += `Bias (E-bar) = ${fmt(eBar)}`;
+            html += `</div>`;
+            return html;
+        }
+
+        // --- 1. Moving Average ---
+        function renderMA(container, data, accs, xName, yName) {
+            let n = 3; // default
+            // Check if existing input exists to preserve value
+            let existInput = document.getElementById('fc_param_ma_n');
+            if(existInput) n = parseInt(existInput.value);
+
+            // Logic
+            let forecasts = Array(data.demands.length).fill(null);
+            for(let i = n; i < data.demands.length + 1; i++) {
+                 // Forecast for period i (index i-1 in array logic, but forecast array matches data)
+                 // actually forecast for period t is based on t-1, t-2...
+                 // F_t = (D_{t-1} + ...)/n
+                 // Index i corresponds to Period i+1 (0-based)
+                 if(i < data.demands.length) {
+                     let sum = 0;
+                     for(let k=1; k<=n; k++) sum += data.demands[i-k];
+                     forecasts[i] = sum/n;
+                 }
+            }
+            // Next Period
+            let nextSum = 0;
+            for(let k=1; k<=n; k++) nextSum += data.demands[data.demands.length-k];
+            let nextForecast = nextSum/n;
+
+            // HTML
+            let html = `<div class="iteration-box" style="border-left: 5px solid #007bff;">
+                <h4>Moving Average (MA)</h4>
+                <div style="margin-bottom:10px;">
+                    Formula: $MA_n = \\frac{\\sum D_i}{n}$ <br>
+                    Parameter: n = <select id="fc_param_ma_n" onchange="solveForecasting()">`;
+            for(let i=1; i<data.demands.length; i++) html += `<option value="${i}" ${i===n?'selected':''}>${i}</option>`;
+            html += `</select>
+                </div>`;
+            
+            // Step show
+            if(n < data.demands.length) {
+                 let exSum = 0; 
+                 let exStr = "";
+                 for(let k=1; k<=n; k++) { exSum += data.demands[n-k]; exStr += `${data.demands[n-k]} + `; }
+                 html += `<p style="color:#666; font-size:0.9em;">Example (Period ${n+1}): (${exStr.slice(0,-3)}) / ${n} = ${fmt(exSum/n)}</p>`;
+            }
+
+            html += `<table><thead><tr><th>${xName}</th><th>${yName}</th><th>Forecast (MA)</th></tr></thead><tbody>`;
+            for(let i=0; i<data.demands.length; i++) {
+                html += `<tr><td>${data.periods[i]}</td><td>${data.demands[i]}</td><td>${fmt(forecasts[i])}</td></tr>`;
+            }
+            html += `<tr style="background:#e6f7ff;"><td>Next</td><td>-</td><td><strong>${fmt(nextForecast)}</strong></td></tr>`;
+            html += `</tbody></table>`;
+            
+            html += buildAccTable(data.demands, forecasts, accs);
+            html += `</div>`;
+            container.innerHTML += html;
+        }
+
+        // --- 2. Weighted Moving Average ---
+        function renderWMA(container, data, accs, xName, yName) {
+            let n = 3;
+            let existN = document.getElementById('fc_param_wma_n');
+            if(existN) n = parseInt(existN.value);
+
+            // Weights Logic
+            let weights = [];
+            // Try get existing weights
+            let wSum = 0;
+            for(let k=0; k<n; k++) {
+                let el = document.getElementById(`fc_wma_w_${k}`);
+                let val = el ? parseFloat(el.value) : (k === 0 ? 0.5 : 0.5/(n-1)); // dummy default
+                weights.push(val);
+                wSum += val;
+            }
+            // Normalize if not approximately 1 (simplistic)
+            if(Math.abs(wSum - 1.0) > 0.01 && !document.getElementById(`fc_wma_w_0`)) {
+                 // First run defaults
+                 weights = [];
+                 let rem = 1.0;
+                 for(let k=0; k<n-1; k++) { weights.push(Number((rem/2).toFixed(2))); rem -= weights[k]; }
+                 weights.push(Number(rem.toFixed(2)));
+            }
+
+            // Calc
+            let forecasts = Array(data.demands.length).fill(null);
+            for(let i=n; i<data.demands.length; i++) {
+                let f = 0;
+                for(let k=0; k<n; k++) {
+                    // Most recent weight (index 0) * Most recent Data (i-1)
+                    f += weights[k] * data.demands[i-1-k];
+                }
+                forecasts[i] = f;
+            }
+            // Next
+            let nextF = 0;
+            for(let k=0; k<n; k++) nextF += weights[k] * data.demands[data.demands.length-1-k];
+
+            let html = `<div class="iteration-box" style="border-left: 5px solid #6f42c1;">
+                <h4>Weighted Moving Average (WMA)</h4>
+                <div style="margin-bottom:10px;">
+                    Formula: $WMA = \\sum W_i D_i$ <br>
+                    Parameter n: <select id="fc_param_wma_n" onchange="solveForecasting()" style="margin-right:10px;">`;
+            for(let i=1; i<data.demands.length; i++) html += `<option value="${i}" ${i===n?'selected':''}>${i}</option>`;
+            html += `</select> <br>Weights (Most recent first): `;
+            
+            for(let k=0; k<n; k++) {
+                html += `W${k+1}: <input type="number" id="fc_wma_w_${k}" value="${weights[k]}" step="0.01" style="width:50px;" onchange="solveForecasting()"> `;
+            }
+            html += `</div>`;
+
+            html += `<table><thead><tr><th>${xName}</th><th>${yName}</th><th>Forecast (WMA)</th></tr></thead><tbody>`;
+            for(let i=0; i<data.demands.length; i++) {
+                html += `<tr><td>${data.periods[i]}</td><td>${data.demands[i]}</td><td>${fmt(forecasts[i])}</td></tr>`;
+            }
+            html += `<tr style="background:#f3e5f5;"><td>Next</td><td>-</td><td><strong>${fmt(nextF)}</strong></td></tr>`;
+            html += `</tbody></table>`;
+            html += buildAccTable(data.demands, forecasts, accs);
+            html += `</div>`;
+            container.innerHTML += html;
+        }
+
+        // --- 3. Simple Exponential Smoothing ---
+        function renderSES(container, data, accs, xName, yName) {
+            let alpha = 0.3;
+            let elAlpha = document.getElementById('fc_ses_alpha');
+            if(elAlpha) alpha = parseFloat(elAlpha.value);
+
+            let forecasts = [];
+            // F1 = D1
+            forecasts.push(data.demands[0]); 
+            
+            for(let i=1; i<data.demands.length; i++) {
+                // F_{t+1} = alpha*D_t + (1-alpha)F_t
+                // Here F[i] is forecast for period i (0-indexed)
+                // F[i] = alpha * D[i-1] + (1-alpha) * F[i-1]
+                let val = alpha * data.demands[i-1] + (1-alpha) * forecasts[i-1];
+                forecasts.push(val);
+            }
+            let nextF = alpha * data.demands[data.demands.length-1] + (1-alpha) * forecasts[forecasts.length-1];
+
+            // Example Step
+            let exHtml = "";
+            if(data.demands.length > 1) {
+                exHtml = `<p style="color:#666; font-size:0.9em;">Period 2: ${alpha}(${data.demands[0]}) + (1-${alpha})(${data.demands[0]}) = ${fmt(forecasts[1])}</p>`;
+            }
+
+            let html = `<div class="iteration-box" style="border-left: 5px solid #fd7e14;">
+                <h4>Simple Exponential Smoothing</h4>
+                Formula: $F_{t+1} = \\alpha D_t + (1-\\alpha)F_t$ <br>
+                Parameter $\\alpha$: <input type="number" id="fc_ses_alpha" value="${alpha}" step="0.1" min="0" max="1" onchange="solveForecasting()">
+                ${exHtml}
+                <table><thead><tr><th>${xName}</th><th>${yName}</th><th>Forecast ($F_t$)</th></tr></thead><tbody>`;
+            
+            for(let i=0; i<data.demands.length; i++) {
+                 html += `<tr><td>${data.periods[i]}</td><td>${data.demands[i]}</td><td>${fmt(forecasts[i])}</td></tr>`;
+            }
+            html += `<tr style="background:#fff3e0;"><td>Next</td><td>-</td><td><strong>${fmt(nextF)}</strong></td></tr>`;
+            html += `</tbody></table>`;
+            html += buildAccTable(data.demands, forecasts, accs);
+            html += `</div>`;
+            container.innerHTML += html;
+        }
+
+        // --- 4. Adjusted Exponential Smoothing ---
+        function renderAES(container, data, accs, xName, yName) {
+            let alpha = 0.5, beta = 0.3;
+            let elA = document.getElementById('fc_aes_alpha');
+            let elB = document.getElementById('fc_aes_beta');
+            if(elA) alpha = parseFloat(elA.value);
+            if(elB) beta = parseFloat(elB.value);
+
+            let F = [data.demands[0]]; // Unadjusted Forecast
+            let T = [0]; // Trend
+            let AF = [F[0] + T[0]]; // Adjusted Forecast
+
+            for(let i=1; i<data.demands.length; i++) {
+                // F_{t+1} based on alpha
+                let fNew = alpha * data.demands[i-1] + (1-alpha)*(F[i-1] + T[i-1]); // Note: some texts use AF[i-1] inside, PDF slide 25 implies (Ft + Tt) which is the previous adjusted forecast base.
+                // Actually slide 25: Ft+1 = alpha*Dt + (1-alpha)(Ft + Tt). Wait, slide 25 uses simple form. 
+                // Let's stick to standard: F_t = alpha * D_{t-1} + (1-alpha)(F_{t-1} + T_{t-1})
+                // T_t = beta(F_t - F_{t-1}) + (1-beta)T_{t-1}
+                // AF_t = F_t + T_t
+                // Initial: F1=D1, T1=0.
+                
+                // My loop index i is "t". i=1 is Period 2.
+                // Calculating values for Period i (using i-1 data)
+                let prevF = F[i-1];
+                let prevT = T[i-1];
+                let prevD = data.demands[i-1];
+
+                // Note: Standard formula usually calculates 'Smooth' component first.
+                // F_t = alpha * D_{t-1} + (1-alpha)*(F_{t-1}+T_{t-1}) ?? 
+                // PDF Slide 25: F_{t+1} (simple) ?? No, Slide 25 defines AF = F + T.
+                // Let's use the most common interpretation which matches the example logic on Slide 26.
+                // Slide 26: F2 = same as F1? "Trend computing factor will be zero".
+                // Let's follow:
+                // Smoothed Avg (At) = alpha * Dt + (1-alpha)*(At-1 + Tt-1)
+                // Trend (Tt) = beta * (At - At-1) + (1-beta)*Tt-1
+                // Forecast (Ft+1) = At + Tt
+                
+                // Mapping to code: F[i] is the Smoothed Average at end of period i.
+                // We are displaying "Forecast for Period i".
+                // So we need Forecast made at i-1 for i.
+                
+                // Let's re-read Slide 26 carefully.
+                // "Adjusted forecast for Feb (AF2) is same as Exp Smoothed (F2) because T2=0".
+                // F2 = alpha D1 + (1-alpha)F1.
+                // T2 = beta(F2 - F1) + (1-beta)T1.
+                // AF2 = F2 + T2.
+                // Ok, we will calculate F, T, AF for each period.
+                
+                let ft = alpha * data.demands[i-1] + (1-alpha) * F[i-1]; // Simple F for this period
+                // WAIT. Adjusted exp smoothing usually feeds off the previous Adjusted one? 
+                // Slide 25 says Ft+1 = alpha Dt + (1-alpha)Ft (Simple).
+                // Then Tt+1 = beta(Ft+1 - Ft) + (1-beta)Tt.
+                // AF = F + T.
+                // This implies F is calculated INDEPENDENTLY using Simple Smoothing, and T tracks the delta in F.
+                
+                F.push(ft);
+                let tt = beta * (ft - F[i-1]) + (1-beta) * T[i-1];
+                T.push(tt);
+                AF.push(ft + tt);
+            }
+
+            // Next Period
+            let lastD = data.demands[data.demands.length-1];
+            let lastF = F[F.length-1];
+            let lastT = T[T.length-1];
+            let nextF_simple = alpha * lastD + (1-alpha)*lastF;
+            let nextT = beta * (nextF_simple - lastF) + (1-beta)*lastT;
+            let nextAF = nextF_simple + nextT;
+
+            let html = `<div class="iteration-box" style="border-left: 5px solid #20c997;">
+                <h4>Adjusted Exponential Smoothing</h4>
+                Formula: $AF_t = F_t + T_t$ <br>
+                $\alpha$: <input type="number" id="fc_aes_alpha" value="${alpha}" step="0.1" onchange="solveForecasting()"> 
+                $\beta$: <input type="number" id="fc_aes_beta" value="${beta}" step="0.1" onchange="solveForecasting()">
+                
+                <table><thead><tr><th>${xName}</th><th>${yName}</th><th>Forecast ($F$)</th><th>Trend ($T$)</th><th>Adj Forecast ($AF$)</th></tr></thead><tbody>`;
+            
+            for(let i=0; i<data.demands.length; i++) {
+                 html += `<tr><td>${data.periods[i]}</td><td>${data.demands[i]}</td>
+                 <td>${fmt(F[i])}</td><td>${fmt(T[i])}</td><td><strong>${fmt(AF[i])}</strong></td></tr>`;
+            }
+            html += `<tr style="background:#e8f5e9;"><td>Next</td><td>-</td><td>${fmt(nextF_simple)}</td><td>${fmt(nextT)}</td><td><strong>${fmt(nextAF)}</strong></td></tr>`;
+            html += `</tbody></table>`;
+            html += buildAccTable(data.demands, AF, accs);
+            html += `</div>`;
+            container.innerHTML += html;
+        }
+
+        // --- 5. Linear Trend Line (Helper & Render) ---
+        function solveLTLLogic(demands) {
+            let n = demands.length;
+            let sumX=0, sumY=0, sumXY=0, sumX2=0;
+            // X is time period 1, 2, 3...
+            for(let i=0; i<n; i++) {
+                let x = i+1;
+                let y = demands[i];
+                sumX += x;
+                sumY += y;
+                sumXY += (x*y);
+                sumX2 += (x*x);
+            }
+            let xBar = sumX/n;
+            let yBar = sumY/n;
+            let b = (sumXY - n*xBar*yBar) / (sumX2 - n*xBar*xBar);
+            let a = yBar - b*xBar;
+            return { a, b, n, xBar, yBar, sumXY, sumX2 };
+        }
+
+        function renderLTL(container, data, accs, xName, yName, res) {
+            // Calculate Forecasts
+            let forecasts = [];
+            for(let i=0; i<res.n; i++) {
+                forecasts.push(res.a + res.b * (i+1));
+            }
+            let nextF = res.a + res.b * (res.n + 1);
+
+            let html = `<div class="iteration-box" style="border-left: 5px solid #e83e8c;">
+                <h4>Linear Trend Line (Least Squares)</h4>
+                Equation: $y = ${fmt(res.a)} + ${fmt(res.b)}x$ <br>
+                <div style="font-size:0.9em; background:#f8f9fa; padding:5px; margin:5px 0;">
+                    Steps: $\\bar{x}=${fmt(res.xBar)}, \\bar{y}=${fmt(res.yBar)}, b=\\frac{${fmt(res.sumXY)} - ${res.n}(${fmt(res.xBar}})(${fmt(res.yBar}})}{${fmt(res.sumX2)} - ${res.n}(${fmt(res.xBar}})^2} = ${fmt(res.b)}$
+                </div>
+                <table><thead><tr><th>${xName} (x)</th><th>${yName} (y)</th><th>Forecast ($y=a+bx$)</th></tr></thead><tbody>`;
+            
+            for(let i=0; i<data.demands.length; i++) {
+                 html += `<tr><td>${i+1}</td><td>${data.demands[i]}</td><td>${fmt(forecasts[i])}</td></tr>`;
+            }
+            html += `<tr style="background:#fce4ec;"><td>${res.n+1}</td><td>-</td><td><strong>${fmt(nextF)}</strong></td></tr>`;
+            html += `</tbody></table>`;
+            html += buildAccTable(data.demands, forecasts, accs);
+            html += `</div>`;
+            container.innerHTML += html;
+        }
+
+        // --- 6. Seasonal Adjustments ---
+        function renderSA(container, data, accs, xName, yName, ltlRes) {
+            // Need Linear Trend on Aggregate data first. 
+            // ltlRes is based on "data.demands" which in Seasonal Mode contains the TOTALS per year (per row).
+            
+            // 1. Calculate Seasonal Indices
+            // Slide 44: Si = Di / TotalD. 
+            // Wait, usually it's Avg(Season)/GrandAvg. 
+            // Let's implement the Average Index method.
+            // For each season column, sum values, get average.
+            // Compare to Global Average.
+            
+            let seasonSums = Array(fc_season_count).fill(0);
+            let grandTotal = 0;
+            let rowCount = data.seasonalData.length; // Years
+            
+            for(let r=0; r<rowCount; r++) {
+                for(let c=0; c<fc_season_count; c++) {
+                    let val = data.seasonalData[r][c];
+                    seasonSums[c] += val;
+                    grandTotal += val;
+                }
+            }
+            
+            // Calculate indices
+            // Method in PDF Slide 44 is extremely simplified for 1 year? 
+            // "S1 = D1 / SumD". This makes S1+S2+S3+S4 = 1.
+            // Standard seasonal indices usually sum to Number of Seasons (4).
+            // BUT, Slide 45 uses these decimals (0.28, 0.20...) to multiply the Annual Forecast.
+            // So yes, they are proportions summing to 1.
+            
+            let indices = [];
+            for(let c=0; c<fc_season_count; c++) {
+                // Average demand for this season
+                // Actually, let's just take Total Season Demand / Grand Total Demand
+                // This is mathematically equivalent to averaging the ratios if data is perfectly balanced.
+                indices.push(seasonSums[c] / grandTotal);
+            }
+
+            // 2. Forecast Next Year Total using LTL
+            let nextYearX = ltlRes.n + 1; 
+            let nextYearTotal = ltlRes.a + ltlRes.b * nextYearX;
+            
+            // 3. Breakdown Next Year
+            let seasonalForecasts = indices.map(idx => idx * nextYearTotal);
+
+            // Display
+            let html = `<div class="iteration-box" style="border-left: 5px solid #17a2b8;">
+                <h4>Seasonal Adjustments</h4>
+                <p><strong>Step 1: Seasonal Indices (Proportion of Total)</strong><br>`;
+            
+            indices.forEach((idx, i) => {
+                html += `S${i+1}: ${fmt(idx)} &nbsp; `;
+            });
+            html += `</p><p><strong>Step 2: Trend Forecast for Next Year (Period ${nextYearX})</strong><br>
+            Using LTL ($y=${fmt(ltlRes.a)} + ${fmt(ltlRes.b)}x$): Total = ${fmt(nextYearTotal)}</p>
+            
+            <p><strong>Step 3: Adjusted Quarterly Forecasts</strong><br>
+            $SF_i = Total \\times S_i$</p>
+            <table style="width:auto;"><thead><tr><th>Season</th><th>Calculation</th><th>Forecast</th></tr></thead><tbody>`;
+            
+            seasonalForecasts.forEach((sf, i) => {
+                html += `<tr><td>Season ${i+1}</td><td>${fmt(nextYearTotal)} * ${fmt(indices[i])}</td><td><strong>${fmt(sf)}</strong></td></tr>`;
+            });
+            html += `</tbody></table></div>`;
+            container.innerHTML += html;
         }
     </script>
 </body>
