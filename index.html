@@ -306,28 +306,44 @@
     <!-- ========================================== -->
 
 
-    <div id="code-generator" class="tool-content" >
-    <h3>GAMS/LINGO Generator (Product Mix)</h3>
-    <p>Generate syntax for Linear Programming models automatically.</p>
+    <div id="code-generator" class="tool-content" style="display:none;">
+    <h3>GAMS/LINGO Generator</h3>
+    <p>Generate syntax for Operations Research models automatically.</p>
 
-    <!-- Configuration Section -->
-    <div class="config-section">
-        <label>Objective:</label>
-        <select id="cg_obj_type">
-            <option value="MAX">Maximize</option>
-            <option value="MIN">Minimize</option>
+    <!-- Phase 1: Problem Selection -->
+    <div class="config-section" style="background: #e9ecef; padding: 15px; border-radius: 5px; margin-bottom: 15px;">
+        <label><strong>Select Problem Type:</strong></label>
+        <select id="cg_problem_type" onchange="cg_toggleConfig()" style="width: 100%; padding: 5px;">
+            <option value="none">-- Choose a Problem --</option>
+            <option value="product_mix">Product Mix (General LP)</option>
+            <!-- Future problems (Transportation, Assignment) will go here -->
         </select>
-        
-        <label>Variables (x):</label>
-        <input type="number" id="cg_num_vars" value="2" min="1" max="20" style="width: 60px;">
-        
-        <label>Constraints:</label>
-        <input type="number" id="cg_num_cons" value="2" min="1" max="20" style="width: 60px;">
-        
-        <button onclick="cg_createGrid()">Generate Inputs</button>
     </div>
 
-    <!-- Data Entry Section -->
+    <!-- Phase 2: Configuration (Hidden by default) -->
+    <div id="cg_config_wrapper" style="display:none;">
+        
+        <!-- Product Mix Config -->
+        <div id="cg_config_product_mix" class="config-section">
+            <label>Objective:</label>
+            <select id="cg_obj_type">
+                <option value="MAX">Maximize</option>
+                <option value="MIN">Minimize</option>
+            </select>
+            
+            <label>Variables (x):</label>
+            <input type="number" id="cg_num_vars" value="2" min="1" max="20" style="width: 60px;">
+            
+            <label>Constraints:</label>
+            <input type="number" id="cg_num_cons" value="2" min="1" max="20" style="width: 60px;">
+            
+            <button onclick="cg_createGrid()">Generate Inputs</button>
+        </div>
+
+        <!-- Future Configs for Transportation etc. will go here -->
+    </div>
+
+    <!-- Phase 3: Data Entry Section -->
     <div id="cg_input_section" class="input-section" style="display:none;">
         <h4>Model Parameters</h4>
         <div style="overflow-x:auto;">
@@ -337,26 +353,37 @@
         </div>
 
         <div class="config-section" style="margin-top: 20px; border-top: 1px solid #ccc; padding-top: 15px;">
-            <label>Target Language:</label>
-            <select id="cg_language">
-                <option value="LINGO">LINGO</option>
-                <option value="GAMS">GAMS</option>
-            </select>
-
-            <label>Format:</label>
-            <select id="cg_format">
-                <option value="SCALAR">Scalar (Explicit Equations)</option>
-                <option value="COMPACT">Compact (Sets & Arrays)</option>
-            </select>
-
-            <button onclick="cg_generateCode()" style="background-color: #28a745; color: white;">Generate Code</button>
+            <div style="display: flex; gap: 10px; align-items: flex-end;">
+                <div>
+                    <label>Target Language:</label><br>
+                    <select id="cg_language">
+                        <option value="LINGO">LINGO</option>
+                        <option value="GAMS">GAMS</option>
+                    </select>
+                </div>
+                <div>
+                    <label>Format:</label><br>
+                    <select id="cg_format">
+                        <option value="SCALAR">Scalar (Explicit Equations)</option>
+                        <option value="COMPACT">Compact (Sets & Arrays)</option>
+                    </select>
+                </div>
+                <div>
+                    <label>Options:</label><br>
+                    <label style="font-weight: normal;">
+                        <input type="checkbox" id="cg_comments" checked> Include Comments
+                    </label>
+                </div>
+            </div>
+            <br>
+            <button onclick="cg_generateCode()" style="background-color: #28a745; color: white; width: 100%;">Generate Code</button>
         </div>
     </div>
 
     <!-- Output Section -->
     <div id="cg_output_box" class="iteration-box" style="display:none; margin-top:20px;">
         <h4>Generated Code:</h4>
-        <textarea id="cg_code_result" rows="15" style="width:100%; font-family: monospace; background: #f4f4f4; border: 1px solid #ccc; padding: 10px;"></textarea>
+        <textarea id="cg_code_result" rows="15" style="width:100%; font-family: 'Courier New', monospace; background: #f4f4f4; border: 1px solid #ccc; padding: 10px; white-space: pre;"></textarea>
         <button onclick="cg_copyToClipboard()" style="margin-top:10px;">Copy to Clipboard</button>
     </div>
 </div>
@@ -1608,12 +1635,32 @@ function buildDetailedAccTable(actuals, forecasts, accs, methodTitle) {
             container.innerHTML += html;
         }
 
-    /* =========================================
+   /* =========================================
    TOOL 4: GAMS/LINGO GENERATOR (Prefix: cg_)
    ========================================= */
 
 let cg_vars = 0;
 let cg_cons = 0;
+
+// UI Logic: Handle Problem Type Selection
+function cg_toggleConfig() {
+    const type = document.getElementById('cg_problem_type').value;
+    const wrapper = document.getElementById('cg_config_wrapper');
+    const pmConfig = document.getElementById('cg_config_product_mix');
+    const inputSec = document.getElementById('cg_input_section');
+    const outputBox = document.getElementById('cg_output_box');
+
+    // Reset visibility
+    inputSec.style.display = 'none';
+    outputBox.style.display = 'none';
+
+    if (type === 'product_mix') {
+        wrapper.style.display = 'block';
+        pmConfig.style.display = 'block';
+    } else {
+        wrapper.style.display = 'none';
+    }
+}
 
 function cg_createGrid() {
     cg_vars = parseInt(document.getElementById('cg_num_vars').value);
@@ -1640,11 +1687,9 @@ function cg_createGrid() {
     // 3. Constraint Rows
     for (let i = 1; i <= cg_cons; i++) {
         let rowHtml = `<tr><td><strong>Con ${i}</strong></td>`;
-        // Matrix Coefficients
         for (let j = 1; j <= cg_vars; j++) {
             rowHtml += `<td><input type="number" id="cg_coeff_${i}_${j}" placeholder="0" style="width:60px"></td>`;
         }
-        // Sign Dropdown
         rowHtml += `<td>
             <select id="cg_sign_${i}" style="width:50px">
                 <option value="le">&le;</option>
@@ -1652,7 +1697,6 @@ function cg_createGrid() {
                 <option value="eq">=</option>
             </select>
         </td>`;
-        // RHS
         rowHtml += `<td><input type="number" id="cg_rhs_${i}" placeholder="0" style="width:60px"></td>`;
         rowHtml += '</tr>';
         table.innerHTML += rowHtml;
@@ -1663,12 +1707,12 @@ function cg_createGrid() {
 }
 
 function cg_generateCode() {
-    // Analytics call
     trackSolve(); 
 
     const lang = document.getElementById('cg_language').value;
     const format = document.getElementById('cg_format').value;
-    const objType = document.getElementById('cg_obj_type').value; // MAX or MIN
+    const objType = document.getElementById('cg_obj_type').value; 
+    const useComments = document.getElementById('cg_comments').checked;
 
     // Harvest Data
     let objCoeffs = [];
@@ -1689,33 +1733,36 @@ function cg_generateCode() {
     }
 
     let code = "";
-
-    // Routing Logic
     if (lang === "LINGO") {
-        if (format === "SCALAR") code = cg_lingoScalar(objType, objCoeffs, matrix, signs, rhs);
-        else code = cg_lingoCompact(objType, objCoeffs, matrix, signs, rhs);
+        if (format === "SCALAR") code = cg_lingoScalar(objType, objCoeffs, matrix, signs, rhs, useComments);
+        else code = cg_lingoCompact(objType, objCoeffs, matrix, signs, rhs, useComments);
     } else {
-        // GAMS
-        if (format === "SCALAR") code = cg_gamsScalar(objType, objCoeffs, matrix, signs, rhs);
-        else code = cg_gamsCompact(objType, objCoeffs, matrix, signs, rhs);
+        if (format === "SCALAR") code = cg_gamsScalar(objType, objCoeffs, matrix, signs, rhs, useComments);
+        else code = cg_gamsCompact(objType, objCoeffs, matrix, signs, rhs, useComments);
     }
 
     document.getElementById('cg_code_result').value = code;
     document.getElementById('cg_output_box').style.display = 'block';
 }
 
+// Helper for Padding Strings (Critical for GAMS Alignment)
+function cg_padStr(str, width) {
+    str = str.toString();
+    while (str.length < width) str += " ";
+    return str;
+}
+
 // --- LINGO GENERATORS ---
 
-function cg_lingoScalar(type, obj, mat, signs, rhs) {
-    let s = `MODEL:\n! Generated by The OR Toolbox;\n\n`;
+function cg_lingoScalar(type, obj, mat, signs, rhs, com) {
+    let s = `MODEL:\n`;
+    if(com) s += `! Generated by The OR ToolKit;\n\n`;
     
-    // Objective
     s += `${type} = `;
     let objTerms = [];
     obj.forEach((val, idx) => { if(val !== 0) objTerms.push(`${val}*x${idx+1}`); });
     s += (objTerms.length ? objTerms.join(" + ") : "0") + ";\n\n";
 
-    // Constraints
     for(let i=0; i<cg_cons; i++) {
         let terms = [];
         mat[i].forEach((val, idx) => { if(val !== 0) terms.push(`${val}*x${idx+1}`); });
@@ -1723,15 +1770,14 @@ function cg_lingoScalar(type, obj, mat, signs, rhs) {
         let lhs = terms.length ? terms.join(" + ") : "0";
         let operator = signs[i] === 'le' ? '<=' : (signs[i] === 'ge' ? '>=' : '=');
         
-        s += `! Constraint ${i+1};\n`;
+        if(com) s += `! Constraint ${i+1};\n`;
         s += `${lhs} ${operator} ${rhs[i]};\n`;
     }
     s += "END";
     return s;
 }
 
-function cg_lingoCompact(type, obj, mat, signs, rhs) {
-    // Map signs to numeric codes: le=1, ge=2, eq=3
+function cg_lingoCompact(type, obj, mat, signs, rhs, com) {
     let typeCodes = signs.map(s => s === 'le' ? 1 : (s === 'ge' ? 2 : 3));
     
     let s = `MODEL:\nSETS:\n`;
@@ -1743,28 +1789,25 @@ function cg_lingoCompact(type, obj, mat, signs, rhs) {
     s += `DATA:\n`;
     s += `  PRICE = ${obj.join(" ")};\n`;
     s += `  LIMIT = ${rhs.join(" ")};\n`;
-    s += `  TYPE  = ${typeCodes.join(" ")};\n`; // 1=LE, 2=GE, 3=EQ
+    s += `  TYPE  = ${typeCodes.join(" ")};\n`; 
     s += `  COEFF = \n`;
     mat.forEach(row => { s += `    ${row.join(" ")}\n`; });
     s += `  ;\nENDDATA\n\n`;
 
-    s += `! Objective Function;\n`;
+    if(com) s += `! Objective Function;\n`;
     s += `${type} = @SUM(VARS(J): PRICE(J) * X(J));\n\n`;
 
-    s += `! Constraints (Grouped by Type);\n`;
-    // Loop 1: Less Than or Equal (Type 1)
+    if(com) s += `! Constraints (Grouped by Type);\n`;
     if(typeCodes.includes(1)) {
-        s += `! Less Than Constraints;\n`;
+        if(com) s += `! Less Than Constraints;\n`;
         s += `@FOR(CONS(I) | TYPE(I) #EQ# 1:\n  @SUM(VARS(J): COEFF(I,J) * X(J)) <= LIMIT(I)\n);\n`;
     }
-    // Loop 2: Greater Than or Equal (Type 2)
     if(typeCodes.includes(2)) {
-        s += `! Greater Than Constraints;\n`;
+        if(com) s += `! Greater Than Constraints;\n`;
         s += `@FOR(CONS(I) | TYPE(I) #EQ# 2:\n  @SUM(VARS(J): COEFF(I,J) * X(J)) >= LIMIT(I)\n);\n`;
     }
-    // Loop 3: Equal (Type 3)
     if(typeCodes.includes(3)) {
-        s += `! Equality Constraints;\n`;
+        if(com) s += `! Equality Constraints;\n`;
         s += `@FOR(CONS(I) | TYPE(I) #EQ# 3:\n  @SUM(VARS(J): COEFF(I,J) * X(J)) = LIMIT(I)\n);\n`;
     }
 
@@ -1774,26 +1817,24 @@ function cg_lingoCompact(type, obj, mat, signs, rhs) {
 
 // --- GAMS GENERATORS ---
 
-function cg_gamsScalar(type, obj, mat, signs, rhs) {
-    let s = `* Generated by The OR Toolbox\n`;
+function cg_gamsScalar(type, obj, mat, signs, rhs, com) {
+    let s = "";
+    if(com) s += `* Generated by The OR ToolKit\n`;
     
-    // Variables
     let varList = [];
     for(let j=1; j<=cg_vars; j++) varList.push(`x${j}`);
+    
     s += `Variables z, ${varList.join(", ")};\n`;
     s += `Positive Variables ${varList.join(", ")};\n\n`;
 
-    // Equations Declaration
     let eqList = ["obj"];
     for(let i=1; i<=cg_cons; i++) eqList.push(`c${i}`);
     s += `Equations ${eqList.join(", ")};\n\n`;
 
-    // Objective Equation
     let objTerms = [];
     obj.forEach((val, idx) => { if(val !== 0) objTerms.push(`${val}*x${idx+1}`); });
     s += `obj.. z =e= ${objTerms.length ? objTerms.join(" + ") : "0"};\n`;
 
-    // Constraints
     for(let i=0; i<cg_cons; i++) {
         let terms = [];
         mat[i].forEach((val, idx) => { if(val !== 0) terms.push(`${val}*x${idx+1}`); });
@@ -1804,37 +1845,65 @@ function cg_gamsScalar(type, obj, mat, signs, rhs) {
         s += `c${i+1}.. ${lhs} ${operator} ${rhs[i]};\n`;
     }
     
-    s += `\nModel ProductMix /all/;\nSolve ProductMix using lp ${type === 'MAX' ? 'maximizing' : 'minimizing'} z;\nDisplay z.l, x.l;`;
+    s += `\nModel ProductMix /all/;\nSolve ProductMix using lp ${type === 'MAX' ? 'maximizing' : 'minimizing'} z;\n`;
+    
+    // FIX: Display specific variables, not array
+    let displayVars = varList.map(v => `${v}.l`).join(", ");
+    s += `Display z.l, ${displayVars};`;
     return s;
 }
 
-function cg_gamsCompact(type, obj, mat, signs, rhs) {
-    // Map signs to numeric codes: le=1, ge=2, eq=3
+function cg_gamsCompact(type, obj, mat, signs, rhs, com) {
     let typeCodes = signs.map(s => s === 'le' ? 1 : (s === 'ge' ? 2 : 3));
     let varNames = []; for(let j=1; j<=cg_vars; j++) varNames.push(`x${j}`);
     let conNames = []; for(let i=1; i<=cg_cons; i++) conNames.push(`c${i}`);
 
-    let s = `* Generated by The OR Toolbox (Compact Mode)\n`;
+    let s = "";
+    if(com) s += `* Generated by The OR ToolKit (Compact Form)\n`;
     s += `Sets\n  j Vars / ${varNames.join(", ")} /\n`;
     s += `  i Cons / ${conNames.join(", ")} /;\n\n`;
 
-    s += `Parameters\n`;
-    s += `  Price(j) / \n`; 
-    obj.forEach((v, k) => s += `    x${k+1} ${v}\n`); 
-    s += `  /\n`;
+    s += `Parameters\n  Price(j) / `; 
+    obj.forEach((v, k) => s += `x${k+1} ${v}${k < cg_vars-1 ? ',' : ''} `); 
+    s += `/\n`;
     
-    s += `  Limit(i) / \n`;
-    rhs.forEach((v, k) => s += `    c${k+1} ${v}\n`);
-    s += `  /\n`;
+    s += `  Limit(i) / `;
+    rhs.forEach((v, k) => s += `c${k+1} ${v}${k < cg_cons-1 ? ',' : ''} `);
+    s += `/\n`;
 
-    s += `  Type(i)  / \n`;
-    typeCodes.forEach((v, k) => s += `    c${k+1} ${v}\n`); // 1=LE, 2=GE, 3=EQ
-    s += `  /;\n\n`;
+    s += `  Type(i)  / `;
+    typeCodes.forEach((v, k) => s += `c${k+1} ${v}${k < cg_cons-1 ? ',' : ''} `); 
+    s += `/;\n\n`;
 
-    s += `Table Coeff(i,j)\n        ${varNames.join("   ")}\n`;
-    mat.forEach((row, idx) => {
-        s += `  c${idx+1}    ${row.join("     ")}\n`;
-    });
+    // FIX: Table Alignment Logic
+    s += `Table Coeff(i,j)\n`;
+    
+    // 1. Calculate Max Width per Column (Header vs Data)
+    let colWidths = [];
+    for(let j=0; j<cg_vars; j++) {
+        let maxW = varNames[j].length; // Header length
+        for(let i=0; i<cg_cons; i++) {
+            let numLen = mat[i][j].toString().length;
+            if(numLen > maxW) maxW = numLen;
+        }
+        colWidths.push(maxW + 2); // Add 2 spaces padding
+    }
+
+    // 2. Print Header
+    s += cg_padStr(" ", 8); // Padding for row label column
+    for(let j=0; j<cg_vars; j++) {
+        s += cg_padStr(varNames[j], colWidths[j]);
+    }
+    s += "\n";
+
+    // 3. Print Rows
+    for(let i=0; i<cg_cons; i++) {
+        s += cg_padStr(conNames[i], 8); // Row label
+        for(let j=0; j<cg_vars; j++) {
+            s += cg_padStr(mat[i][j], colWidths[j]);
+        }
+        s += "\n";
+    }
     s += `;\n\n`;
 
     s += `Variables z; Positive Variable x(j);\n`;
@@ -1842,14 +1911,14 @@ function cg_gamsCompact(type, obj, mat, signs, rhs) {
 
     s += `obj.. z =e= sum(j, Price(j)*x(j));\n\n`;
     
-    s += `* Constraints Grouped by Type code (1=LE, 2=GE, 3=EQ)\n`;
+    if(com) s += `* Constraints Grouped by Type code (1=LE, 2=GE, 3=EQ)\n`;
     s += `eq_le(i)$(Type(i)=1).. sum(j, Coeff(i,j)*x(j)) =l= Limit(i);\n`;
     s += `eq_ge(i)$(Type(i)=2).. sum(j, Coeff(i,j)*x(j)) =g= Limit(i);\n`;
     s += `eq_eq(i)$(Type(i)=3).. sum(j, Coeff(i,j)*x(j)) =e= Limit(i);\n\n`;
 
     s += `Model CompactModel /all/;\n`;
     s += `Solve CompactModel using lp ${type === 'MAX' ? 'maximizing' : 'minimizing'} z;\n`;
-    s += `Display z.l, x.l;`;
+    s += `Display z.l, x.l;`; // x.l is valid here because x(j) is a Set/Array
 
     return s;
 }
