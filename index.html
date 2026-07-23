@@ -24,7 +24,7 @@
             text-align: center;
         }
 
-        /* --- New Selector Styling --- */
+        
         .selector-container {
             text-align: center;
             background: white;
@@ -59,7 +59,7 @@
             border-color: #007bff;
         }
 
-        /* --- Tool Containers --- */
+        
         .tool-content {
             display: none;
             padding: 20px;
@@ -86,7 +86,7 @@
             }
         }
 
-        /* --- Existing Styles (Kept for compatibility) --- */
+        
         .config-section,
         .input-section {
             background: white;
@@ -296,11 +296,11 @@
 <body>
 
     <div style="text-align: center; margin: 20px 0;">
-        <img src="https://i.ibb.co/C3KMKT9N/photo-2023-07-08-02-41-40-2.jpg" alt="Simplex Logo"
+        <img src="https://i.ibb.co/TqPcgXRD/photo-2023-07-08-02-41-40.jpg" alt="Simplex Logo"
             style="max-width: 100%; max-height: 250px; height: auto; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
     </div>
 
-    <!-- UPDATED HEADER -->
+    
     <h1>The شنطة العدة of Operations Research</h1>
 
     <!-- NEW TOOL SELECTOR -->
@@ -318,7 +318,7 @@
     </div>
 
     <!-- ========================================== -->
-    <!-- TOOL 1: LP Simplex (Existing)             -->
+    <!-- TOOL 1: LP Simplex                         -->
     <!-- ========================================== -->
     <div id="lp-simplex" class="tool-content">
         <h2 style="border-bottom: 2px solid #007bff; padding-bottom: 10px;">[LP] Simplex Solver</h2>
@@ -341,7 +341,7 @@
     </div>
 
     <!-- ========================================== -->
-    <!-- TOOL 2: OR Forecasting (Placeholder)      -->
+    <!-- TOOL 2: OR Forecasting                     -->
     <!-- ========================================== -->
     <div id="or-forecasting" class="tool-content">
         <h2 style="border-bottom: 2px solid #28a745; padding-bottom: 10px; color: #28a745;">[OR] Forecasting Calculator
@@ -471,7 +471,7 @@
     </div>
 
     <!-- ========================================== -->
-    <!-- TOOL 3: OR Simplex (Existing)             -->
+    <!-- TOOL 3: OR Simplex                         -->
     <!-- ========================================== -->
     <div id="or-simplex" class="tool-content">
         <h2 style="border-bottom: 2px solid #00bcd4; padding-bottom: 10px;">[OR] Simplex Solver</h2>
@@ -496,7 +496,7 @@
 
 
     <!-- ========================================== -->
-    <!-- TOOL 4: GAMS/LINGO Code Generator (Existing)             -->
+    <!-- TOOL 4: GAMS/LINGO Code Generator          -->
     <!-- ========================================== -->
 
 
@@ -512,7 +512,7 @@
                 <option value="none">-- Choose a Problem --</option>
                 <option value="product_mix">Product Mix (General LP)</option>
                 <option value="transportation">Transportation Problem</option>
-                <!-- Future problems (Transportation, Assignment) will go here -->
+                <!-- Future problems (Transportation, Assignment)  -->
             </select>
         </div>
 
@@ -533,7 +533,7 @@
                 <button onclick="cg_createGrid()">Generate Inputs</button>
             </div>
 
-            <!-- Transportation Config (NEW) -->
+            <!-- Transportation Config -->
             <div id="cg_config_transportation" class="config-section" style="display:none;">
                 <div class="input-row">
                     <label>Sources (Rows): <input type="number" id="cg_trans_sources" value="3" min="1"
@@ -588,7 +588,7 @@
             <button onclick="cg_copyToClipboard()" style="margin-top:10px;">Copy to Clipboard</button>
 
             <!-- VISUALIZATION SECTION (Start) -->
-            <!-- You can delete this block later if you don't want the visualizer -->
+            
             <div id="cg_viz_container"
                 style="display:none; margin-top: 30px; border-top: 2px dashed #ccc; padding-top: 20px; text-align: center;">
                 <h4>Network Visualization</h4>
